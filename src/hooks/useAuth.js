@@ -4,3 +4,6 @@ export const citasService = {
   async actualizarCita(id, data) { return { data: { success: true } }; },
   async eliminarCita(id) { return { data: { success: true } }; }
 };
+export function useAuth() {
+  return { user: null, login: () => {}, logout: () => {} };
+}

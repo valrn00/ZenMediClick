@@ -1,10 +1,11 @@
+import axios from 'axios';
+const API_URL = 'http://localhost:8000/api'; // Ajusta a tu backend
+
 export const usuarioService = {
-  async loginUsuario({ email, password, rol }) {
-    // Mock; real: axios.post('/api/login')
-    return { data: { user: { email, rol }, token: 'mock' } };
+  async loginUsuario({ email, password }) {
+    return axios.post(`${API_URL}/login`, { email, password });
   },
-  async registerUsuario({ nombre, apellido, email, password }) {
-    // Mock IPS auto-asociada
-    return { data: { success: true, ips: 'IPS Ejemplo' } };
+  async registerUsuario(data) {
+    return axios.post(`${API_URL}/register`, data);
   }
 };

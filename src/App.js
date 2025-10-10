@@ -10,9 +10,6 @@ import { DoctorDashboard } from './components/DoctorDashboard';
 import { AdminDashboard } from './components/AdminDashboard';
 import { citasService, useAuth } from './hooks/useAuth';
 
-function App() {
-  ;
-  // ...
   function App() {
     const { user } = useAuth();
     return (

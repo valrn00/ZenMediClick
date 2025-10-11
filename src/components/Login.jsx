@@ -12,7 +12,7 @@ export const Login = () => {
     e.preventDefault();
     const res = await login(credentials);
     if (res.data.user) {
-      navigate('/dashboard'); // Redirige a dashboard; rol viene de DB en backend
+      navigate('/dashboard');
     } else {
       alert('Credenciales inválidas');
     }
@@ -20,12 +20,13 @@ export const Login = () => {
 
   return (
     <Container maxWidth="sm" sx={{ mt: 4, backgroundColor: '#f4f7fa', p: 3, borderRadius: 2 }}>
-      <Typography variant="h4" color="#007bff">Login</Typography>
+      <Typography variant="h4" color="#007bff">Login ZenMediClick</Typography>
       <Box component="form" onSubmit={handleSubmit}>
         <TextField fullWidth label="Email" value={credentials.email} onChange={(e) => setCredentials({ ...credentials, email: e.target.value })} sx={{ mb: 2 }} />
         <TextField fullWidth label="Contraseña" type="password" value={credentials.password} onChange={(e) => setCredentials({ ...credentials, password: e.target.value })} sx={{ mb: 2 }} />
-        <Button fullWidth variant="contained" sx={{ backgroundColor: '#007bff' }} type="submit">Iniciar Sesión</Button>
+        <Button fullWidth variant="contained" sx={{ backgroundColor: '#007bff', '&:hover': { backgroundColor: '#0056b3' } }} type="submit">Iniciar Sesión</Button>
       </Box>
+      <Button onClick={() => navigate('/register')} sx={{ mt: 1 }}>Registrarse</Button>
     </Container>
   );
 };

@@ -1,59 +1,43 @@
-import { useCitas } from '../hooks/useCitas';
+import { useEffect, useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
+import { citasService } from '../services/citasService';
 import { Container, Table, TableBody, TableCell, TableHead, TableRow, Typography, Button } from '@mui/material';
+
 export const AdminDashboard = () => {
-  const { citas, eliminar } = useCitas();
-  const { logout } = useAuth();
+  const { user, token, logout } = useAuth();
+  const [citas, setCitas] = useState([]);
+
+  useEffect(() => {
+    const fetchCitas = async () => {
+      const res = await citasService.getCitas();
+      setCitas(res.data || []);
+    };
+    fetchCitas();
+  }, [token]);
+
   return (
     <Container maxWidth="lg" sx={{ mt: 4, p: 3, backgroundColor: '#f4f7fa', borderRadius: 2 }}>
-      <Typography variant="h4" color="#007bff">Dashboard Admin</Typography>
-      <Typography variant="h6" color="#007bff">Lista de Pacientes</Typography>
-      <Table sx={{ mb: 4 }}>
+      <Typography variant="h4" color="#007bff">Dashboard Administrador</Typography>
+      <Typography variant="h6" color="#007bff">Lista de Citas</Typography>
+      <Table>
         <TableHead>
           <TableRow>
-            <TableCell>Nombre</TableCell>
-            <TableCell>Email</TableCell>
-            <TableCell>IPS</TableCell>
-            <TableCell>Acciones</TableCell>
+            <TableCell>Paciente</TableCell>
+            <TableCell>Médico</TableCell>
+            <TableCell>Fecha</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
           {citas.map((cita) => (
             <TableRow key={cita.id}>
-              <TableCell>{cita.paciente || 'Juan Doe'}</TableCell>
-              <TableCell>{cita.email || 'juan@example.com'}</TableCell>
-              <TableCell>IPS Ejemplo</TableCell>
-              <TableCell>
-                <Button sx={{ backgroundColor: '#007bff' }} onClick={() => alert('Editar')}>Editar</Button>
-                <Button sx={{ backgroundColor: '#28a745' }} onClick={() => eliminar(cita.id)}>Eliminar</Button>
-              </TableCell>
+              <TableCell>{cita.id_paciente}</TableCell>
+              <TableCell>{cita.id_medico}</TableCell>
+              <TableCell>{cita.fecha}</TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
-      <Typography variant="h6" color="#007bff">Lista de Médicos</Typography>
-      <Table>
-        <TableHead>
-          <TableRow>
-            <TableCell>Nombre</TableCell>
-            <TableCell>Email</TableCell>
-            <TableCell>Especialidad</TableCell>
-            <TableCell>Acciones</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          <TableRow>
-            <TableCell>Dr. Pérez</TableCell>
-            <TableCell>juanperez@example.com</TableCell>
-            <TableCell>General</TableCell>
-            <TableCell>
-              <Button sx={{ backgroundColor: '#007bff' }} onClick={() => alert('Editar')}>Editar</Button>
-              <Button sx={{ backgroundColor: '#28a745' }} onClick={() => alert('Eliminar')}>Eliminar</Button>
-            </TableCell>
-          </TableRow>
-        </TableBody>
-      </Table>
-      <Button onClick={logout} sx={{ mt: 2, backgroundColor: '#007bff' }}>Logout</Button>
+      <Button onClick={logout} sx={{ mt: 2, backgroundColor: '#007bff', '&:hover': { backgroundColor: '#0056b3' } }}>Logout</Button>
     </Container>
   );
 };

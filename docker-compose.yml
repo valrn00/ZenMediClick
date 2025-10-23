@@ -10,8 +10,6 @@ services:
     volumes:
       - ./script.sql:/docker-entrypoint-initdb.d/init.sql
       - mysql_data:/var/lib/mysql
-    ports:
-      - "8000:8000"   # ← PUERTO LIBRE
 
   backend:
     build: ./backend

@@ -2,7 +2,9 @@ from fastapi import FastAPI, Depends, HTTPException, status, BackgroundTasks
 from fastapi.security import HTTPBearer
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
-from . import crud, models, schemas
+import crud
+import models
+import schemas
 from .database import SessionLocal, engine
 
 models.Base.metadata.create_all(bind=engine)

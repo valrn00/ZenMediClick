@@ -11,7 +11,7 @@ services:
       - ./script.sql:/docker-entrypoint-initdb.d/init.sql
       - mysql_data:/var/lib/mysql
     ports:
-      - "3306:3306"
+      - "3307:3306"   # ← PUERTO LIBRE
 
   backend:
     build: ./backend
@@ -22,7 +22,6 @@ services:
       - db
     environment:
       - DB_URL=mysql+pymysql://root:rootpass@db/zenmediclick
-      - SECRET_KEY=supersecretkey1234567890
     ports:
       - "8000:8000"
 

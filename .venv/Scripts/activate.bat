@@ -8,7 +8,7 @@ if defined _OLD_CODEPAGE (
     "%SystemRoot%\System32\chcp.com" 65001 > nul
 )
 
-set VIRTUAL_ENV=c:\Users\Acer\Desktop\zzz\ZenMediClick_\.venv
+set VIRTUAL_ENV=C:\Users\Mi Nico\Desktop\m\ZenMediClick_\.venv
 
 if not defined PROMPT set PROMPT=$P$G
 

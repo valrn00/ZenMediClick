@@ -4,25 +4,24 @@ import { citasService } from '../services/citasService';
 export const useCitas = () => {
   const [citas, setCitas] = useState([]);
 
+  const cargarCitas = async () => {
+    const res = await citasService.getCitas();
+    setCitas(res.data);
+  };
+
   useEffect(() => {
-    const stored = localStorage.getItem('citas');
-    if (stored) setCitas(JSON.parse(stored));
+    cargarCitas();
   }, []);
 
-  const agendar = async (cita) => {
-    const newCita = { ...cita, id: Date.now(), paciente: localStorage.getItem('user')?.email || 'Unknown' };
-    await citasService.agendarCita(newCita);
-    const newCitas = [...citas, newCita];
-    setCitas(newCitas);
-    localStorage.setItem('citas', JSON.stringify(newCitas));
+  const agendarCita = async (cita) => {
+    await citasService.agendarCita(cita);
+    cargarCitas();
   };
 
-  const eliminar = async (id) => {
-    await citasService.eliminarCita(id);
-    const newCitas = citas.filter(c => c.id !== id);
-    setCitas(newCitas);
-    localStorage.setItem('citas', JSON.stringify(newCitas));
+  const cancelarCita = async (id) => {
+    await citasService.cancelarCita(id);
+    cargarCitas();
   };
 
-  return { citas, agendar, eliminar };
+  return { citas, cargarCitas, agendarCita, cancelarCita };
 };

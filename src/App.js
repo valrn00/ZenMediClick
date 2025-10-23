@@ -1,31 +1,59 @@
 ﻿import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { useAuth } from './hooks/useAuth';
+import { AuthProvider } from './hooks/useAuth';
+import { LandingPage } from './components/LandingPage';
 import { Login } from './components/Login';
 import { Registration } from './components/Registration';
+import { ResetPassword } from './components/ResetPassword';
 import { PatientDashboard } from './components/PatientDashboard';
 import { DoctorDashboard } from './components/DoctorDashboard';
-import { AdminDashboard } from './components/AdminDashboard';
+import { AdminDashboard } from './components/AdminDashboard'; // Renombrado de developerDashboard
 
 function App() {
-  const { user, token } = useAuth();
-  console.log('App - User:', user, 'Token:', token);
   return (
-    <Router>
-      <Routes>
-        <Route path="/login" element={!token ? <Login /> : <Navigate to="/dashboard" />} />
-        <Route path="/register" element={!token ? <Registration /> : <Navigate to="/dashboard" />} />
-        <Route
-          path="/dashboard"
-          element={token ? (
-            user?.rol === 'Paciente' ? <PatientDashboard /> :
-            user?.rol === 'Medico' ? <DoctorDashboard /> :
-            user?.rol === 'Administrador' ? <AdminDashboard /> : <Navigate to="/login" />
-          ) : <Navigate to="/login" />}
-        />
-        <Route path="/" element={<Navigate to="/login" />} />
-      </Routes>
-    </Router>
+    <AuthProvider>
+      <Router>
+        <Routes>
+          {/* 1. PÁGINA PRINCIPAL: Landing (antes del login) */}
+          <Route path="/" element={<LandingPage />} />
+
+          {/* 2. AUTENTICACIÓN */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Registration />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+
+          {/* 3. DASHBOARD PROTEGIDO POR ROL */}
+          <Route
+            path="/dashboard"
+            element={
+              <PrivateRoute>
+                <RoleBasedDashboard />
+              </PrivateRoute>
+            }
+          />
+
+          {/* 4. REDIRECCIÓN POR DEFECTO */}
+          <Route path="*" element={<Navigate to="/" />} />
+        </Routes>
+      </Router>
+    </AuthProvider>
   );
 }
+
+// Ruta protegida (SENA: useAuth)
+const PrivateRoute = ({ children }) => {
+  const { user } = useAuth();
+  return user ? children : <Navigate to="/login" />;
+};
+
+// Dashboard según rol (SENA: lógica en hook)
+const RoleBasedDashboard = () => {
+  const { user } = useAuth();
+
+  if (user?.rol === 'Paciente') return <PatientDashboard />;
+  if (user?.rol === 'Medico') return <DoctorDashboard />;
+  if (user?.rol === 'Administrador') return <AdminDashboard />;
+
+  return <Navigate to="/login" />;
+};
 
 export default App;

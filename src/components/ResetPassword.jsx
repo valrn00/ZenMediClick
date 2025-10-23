@@ -1,46 +1,44 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Container, TextField, Button, Typography, Box } from '@mui/material';
-import axios from 'axios';
+import { useState } from 'react';
+import { usuarioService } from '../services/usuarioService';
+import { useNavigate } from 'react-router-dom';
+import logo from '../assets/logo.png';
 
 export const ResetPassword = () => {
   const [email, setEmail] = useState('');
-  const [token, setToken] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [step, setStep] = useState(1); // 1: Send email, 2: Confirm
+  const [sent, setSent] = useState(false);
+  const navigate = useNavigate();
 
-  const handleSendEmail = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const res = await axios.post('http://localhost:8000/api/reset-password', { email });
-    if (res.data.success) {
-      alert('Email enviado con token');
-      setStep(2);
-    }
-  };
-
-  const handleConfirm = async (e) => {
-    e.preventDefault();
-    const res = await axios.post('http://localhost:8000/api/reset-password/confirm', { token, new_password: newPassword });
-    if (res.data.success) {
-      alert('Contraseña reestablecida');
-    }
+    await usuarioService.resetPassword(email);
+    setSent(true);
   };
 
   return (
-    <Container maxWidth="sm" sx={{ mt: 4, backgroundColor: '#f4f7fa', p: 3, borderRadius: 2 }}>
-      <Typography variant="h4" color="#007bff">Reestablecer Contraseña</Typography>
-      {step === 1 ? (
-        <Box component="form" onSubmit={handleSendEmail}>
-          <TextField fullWidth label="Email" value={email} onChange={(e) => setEmail(e.target.value)} sx={{ mb: 2 }} />
-          <Button fullWidth variant="contained" sx={{ backgroundColor: '#007bff' }} type="submit">Enviar Token</Button>
+    <Box sx={{ minHeight: '100vh', background: 'linear-gradient(135deg, #e0f2fe 0%, #a7f3d0 100%)', display: 'flex', alignItems: 'center' }}>
+      <Container maxWidth="xs">
+        <Box sx={{ bgcolor: 'white', p: 4, borderRadius: 3, boxShadow: 3, textAlign: 'center' }}>
+          <img src={logo} alt="Logo" style={{ width: '80px', marginBottom: '16px' }} />
+          <Typography variant="h5" sx={{ mb: 3, color: '#1e40af' }}>
+            ¿Olvidaste tu contraseña?
+          </Typography>
+          {sent ? (
+            <Typography color="success.main">Revisa tu correo. Te enviamos un enlace para restablecerla.</Typography>
+          ) : (
+            <>
+              <Typography variant="body2" sx={{ mb: 2 }}>Ingresa tu cédula o correo registrado</Typography>
+              <Box component="form" onSubmit={handleSubmit}>
+                <TextField fullWidth label="Cédula o Email" value={email} onChange={e => setEmail(e.target.value)} sx={{ mb: 2 }} />
+                <Button fullWidth variant="contained" type="submit" sx={{ backgroundColor: '#3b82f6', borderRadius: '50px' }}>
+                  Enviar enlace
+                </Button>
+              </Box>
+            </>
+          )}
+          <Button onClick={() => navigate('/login')} sx={{ mt: 2 }}>← Volver al login</Button>
         </Box>
-      ) : (
-        <Box component="form" onSubmit={handleConfirm}>
-          <TextField fullWidth label="Token" value={token} onChange={(e) => setToken(e.target.value)} sx={{ mb: 2 }} />
-          <TextField fullWidth label="Nueva Contraseña" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} sx={{ mb: 2 }} />
-          <Button fullWidth variant="contained" sx={{ backgroundColor: '#007bff' }} type="submit">Confirmar</Button>
-        </Box>
-      )}
-    </Container>
+      </Container>
+    </Box>
   );
 };

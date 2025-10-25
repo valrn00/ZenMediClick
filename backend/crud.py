@@ -1,6 +1,5 @@
 from sqlalchemy.orm import Session
-from . import models, schemas, utils
-from .email_service import send_reset_email
+from backend import models, schemas, utils
 from fastapi import HTTPException, status, BackgroundTasks
 import random
 import string
@@ -69,18 +68,3 @@ def cancelar_cita(db: Session, cita_id: int, user_id: int):
     cita.estado = models.EstadoCitaEnum.Cancelada
     db.commit()
     return {"detail": "Cita cancelada"}
-
-def send_reset_token(db: Session, email: str, background_tasks: BackgroundTasks):
-    user = db.query(models.Usuario).filter(models.Usuario.email == email).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="Email no encontrado")
-    token = ''.join(random.choices(string.ascii_letters + string.digits, k=32))
-    # Aquí guardarías el token en Redis o DB con expiración
-    background_tasks.add_task(send_reset_email, email, token)
-    return {"detail": "Email enviado"}
-
-def reset_password(db: Session, req: schemas.ResetConfirm):
-    # Validar token (en producción: Redis/DB)
-    hashed = utils.get_password_hash(req.new_password)
-    # Buscar usuario por token y actualizar
-    return {"detail": "Contraseña actualizada"}

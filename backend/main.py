@@ -1,17 +1,21 @@
-from fastapi import FastAPI, Depends, HTTPException, status, BackgroundTasks
+from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.security import HTTPBearer
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
+
+# IMPORTS CORREGIDOS 
 import crud
 import models
 import schemas
-from .database import SessionLocal, engine
+from database import SessionLocal, engine
 
+# Crear tablas
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="ZenMediClick API")
 security = HTTPBearer()
 
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000"],
@@ -27,6 +31,7 @@ def get_db():
     finally:
         db.close()
 
+# ------------------- AUTH -------------------
 @app.post("/api/register", response_model=schemas.UsuarioOut)
 def register(user: schemas.UsuarioCreate, db: Session = Depends(get_db)):
     if crud.get_usuario_by_cedula(db, user.cedula):
@@ -37,19 +42,13 @@ def register(user: schemas.UsuarioCreate, db: Session = Depends(get_db)):
 def login(cred: schemas.Login, db: Session = Depends(get_db)):
     return crud.login_usuario(db, cred)
 
-@app.post("/api/reset-password")
-def reset_password(req: schemas.ResetPassword, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
-    return crud.send_reset_token(db, req.email, background_tasks)
-
-@app.post("/api/reset-password/confirm")
-def confirm_reset(req: schemas.ResetConfirm, db: Session = Depends(get_db)):
-    return crud.reset_password(db, req)
-
+# ------------------- USUARIOS (ADMIN) -------------------
 @app.get("/api/usuarios")
 def get_usuarios(db: Session = Depends(get_db), token: str = Depends(security)):
-    crud.verify_admin(token)
+    crud.verify_admin(token.credentials)
     return crud.get_usuarios(db)
 
+# ------------------- CITAS -------------------
 @app.get("/api/citas")
 def get_citas(db: Session = Depends(get_db), token: str = Depends(security)):
     payload = crud.decode_token(token.credentials)

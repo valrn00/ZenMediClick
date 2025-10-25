@@ -22,3 +22,7 @@ CREATE TABLE citas (
     FOREIGN KEY (paciente_id) REFERENCES usuarios(id),
     FOREIGN KEY (medico_id) REFERENCES usuarios(id)
 );
+INSERT INTO usuarios (nombre, email, password, rol) VALUES
+('Admin', 'admin@zenmediclick.com', '$2b$12$...', 'Administrador'),
+('Dr. Pérez', 'perez@zenmediclick.com', '$2b$12$...', 'Medico'),
+('Juan Paciente', 'juan@zenmediclick.com', '$2b$12$...', 'Paciente');

@@ -3,14 +3,14 @@ from fastapi.security import HTTPBearer
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
-# IMPORTS CORREGIDOS 
+# IMPORTS CORRECTOS (sin "backend.")
 import crud
 import models
 import schemas
 from database import SessionLocal, engine
 
 # Crear tablas
-models.Base.metadata.create_all(bind=engine)
+# models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="ZenMediClick API")
 security = HTTPBearer()
@@ -38,7 +38,7 @@ def register(user: schemas.UsuarioCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Cédula ya registrada")
     return crud.create_usuario(db, user)
 
-@app.post("/api/login")
+@app.post("/api/login", response_model=dict)
 def login(cred: schemas.Login, db: Session = Depends(get_db)):
     return crud.login_usuario(db, cred)
 

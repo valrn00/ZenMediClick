@@ -2,24 +2,38 @@ import axios from 'axios';
 
 const API_URL = 'http://localhost:8000/api';
 
-const getHeaders = () => ({
-  headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+const api = axios.create({
+  baseURL: API_URL,
+  withCredentials: true,
 });
 
 export const usuarioService = {
-  async loginUsuario({ email, password }) {
-    return await axios.post(`${API_URL}/login`, { email, password });
+  async loginUsuario({ cedula, password }) {
+    try {
+      const res = await api.post('/login', { 
+        cedula: cedula?.trim() || '', 
+        password: password?.trim() || '' 
+      });
+      return res.data;
+    } catch (error) {
+      console.error("Error en login:", error.response?.data || error.message);
+      throw error; // Deja que el backend diga qué falla
+    }
   },
 
   async registerUsuario(data) {
-    return await axios.post(`${API_URL}/register`, data);
-  },
-
-  async resetPassword(email) {
-    return await axios.post(`${API_URL}/reset-password`, { email });
-  },
-
-  async getUsuarios() {
-    return await axios.get(`${API_URL}/usuarios`, getHeaders());
+    try {
+      const res = await api.post('/register', {
+        nombre: data.nombre?.trim() || '',
+        cedula: data.cedula?.trim() || '',
+        email: data.email?.trim() || '',
+        password: data.password?.trim() || '',
+        rol: data.rol
+      });
+      return res.data;
+    } catch (error) {
+      console.error("Error en registro:", error.response?.data || error.message);
+      throw error;
+    }
   }
 };

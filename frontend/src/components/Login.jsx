@@ -1,87 +1,34 @@
-import { Container, TextField, Button, Typography, Box, Link } from '@mui/material';
+// Login.jsx (ejemplo simple)
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
-import logo from '../assets/logo.png';
+import axios from 'axios';
 
-export const Login = () => {
-  const [form, setForm] = useState({ cedula: '', password: '' });
-  const { login } = useAuth();
-  const navigate = useNavigate();
+export default function Login() {
+  const [cedula, setCedula] = useState('');
+  const [password, setPassword] = useState('');
+  const [msg, setMsg] = useState('');
 
-  const handleSubmit = async (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    const res = await login({ email: form.cedula, password: form.password });
-    if (res.data.user) {
-      navigate('/dashboard');
-    } else {
-      alert('Cédula o contraseña incorrecta');
+    try {
+      const res = await axios.post('http://localhost:8000/api/login', {
+        cedula,
+        password
+      });
+      localStorage.setItem('token', res.data.token);
+      localStorage.setItem('user', JSON.stringify(res.data.user));
+      setMsg('Login exitoso!');
+      // Redirigir o recargar
+    } catch (err) {
+      setMsg(err.response?.data?.detail || 'Error');
     }
   };
 
   return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        background: 'linear-gradient(135deg, #e0f2fe 0%, #a7f3d0 100%)',
-        display: 'flex',
-        alignItems: 'center'
-      }}
-    >
-      <Container maxWidth="xs">
-        <Box
-          sx={{
-            bgcolor: 'white',
-            p: 4,
-            borderRadius: 3,
-            boxShadow: 3,
-            textAlign: 'center'
-          }}
-        >
-          <img src={logo} alt="Logo" style={{ width: '80px', marginBottom: '16px' }} />
-          <Typography variant="h5" sx={{ mb: 3, color: '#1e40af' }}>
-            Inicio de sesión
-          </Typography>
-          <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
-            <TextField
-              fullWidth
-              label="Cédula"
-              value={form.cedula}
-              onChange={(e) => setForm({ ...form, cedula: e.target.value })}
-              sx={{ mb: 2 }}
-            />
-            <TextField
-              fullWidth
-              label="Contraseña"
-              type="password"
-              value={form.password}
-              onChange={(e) => setForm({ ...form, password: e.target.value })}
-              sx={{ mb: 3 }}
-            />
-            <Button
-              fullWidth
-              variant="contained"
-              type="submit"
-              sx={{
-                backgroundColor: '#3b82f6',
-                borderRadius: '50px',
-                py: 1.5,
-                '&:hover': { backgroundColor: '#2563eb' }
-              }}
-            >
-              Iniciar sesión
-            </Button>
-          </Box>
-          <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between' }}>
-            <Link href="/register" underline="hover" color="#3b82f6">
-              ← Registrarse
-            </Link>
-            <Link href="/reset-password" underline="hover" color="#3b82f6">
-              ¿Olvidaste tu contraseña?
-            </Link>
-          </Box>
-        </Box>
-      </Container>
-    </Box>
+    <form onSubmit={handleLogin}>
+      <input placeholder="Cédula" value={cedula} onChange={e => setCedula(e.target.value)} />
+      <input type="password" placeholder="Contraseña" value={password} onChange={e => setPassword(e.target.value)} />
+      <button type="submit">Login</button>
+      <p>{msg}</p>
+    </form>
   );
-};
+}

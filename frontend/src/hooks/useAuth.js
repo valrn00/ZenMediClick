@@ -1,50 +1,41 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { usuarioService } from '../services/usuarioService';
 
-const AuthContext = createContext();
-
-export const AuthProvider = ({ children }) => {
+export const useAuth = () => {
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(null);
 
   useEffect(() => {
-    const stored = localStorage.getItem('token');
-    if (stored) {
-      setToken(stored);
-      // Opcional: validar token con backend
+    const token = localStorage.getItem('token');
+    if (token) {
+      setUser({
+        id: localStorage.getItem('id'),
+        nombre: localStorage.getItem('nombre'),
+        rol: localStorage.getItem('rol')
+      });
     }
   }, []);
 
   const login = async (credentials) => {
-    const res = await usuarioService.loginUsuario(credentials);
-    if (res.data.user) {
-      const { user, token } = res.data;
-      setUser(user);
-      setToken(token);
-      localStorage.setItem('token', token); // SENA: persistencia
+    // Asegúrate de que credentials tenga cedula y password
+    if (!credentials?.cedula || !credentials?.password) {
+      throw new Error("Faltan credenciales");
     }
-    return res;
-  };
 
-  const register = async (data) => {
-    const res = await usuarioService.registerUsuario(data);
-    if (res.data.success) {
-      return await login({ email: data.cedula, password: data.password });
-    }
-    return res;
+    const data = await usuarioService.loginUsuario(credentials);
+
+    localStorage.setItem('token', data.token);
+    localStorage.setItem('id', data.user.id);
+    localStorage.setItem('nombre', data.user.nombre);
+    localStorage.setItem('rol', data.user.rol);
+    setUser(data.user);
+
+    return data;
   };
 
   const logout = () => {
+    localStorage.clear();
     setUser(null);
-    setToken(null);
-    localStorage.removeItem('token');
   };
 
-  return (
-    <AuthContext.Provider value={{ user, token, login, register, logout }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return { user, login, logout };
 };
-
-export const useAuth = () => useContext(AuthContext);

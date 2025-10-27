@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
-from backend import models, schemas, utils
-from fastapi import HTTPException, status, BackgroundTasks
+import models, schemas, utils  # SIN "backend."
+from fastapi import HTTPException, status
 import random
 import string
 
@@ -23,18 +23,23 @@ def create_usuario(db: Session, user: schemas.UsuarioCreate):
 
 def login_usuario(db: Session, cred: schemas.Login):
     user = get_usuario_by_cedula(db, cred.cedula)
-    if not user or not utils.verify_password(cred.password, user.password):
-        raise HTTPException(status_code=401, detail="Credenciales inválidas")
+    
+    if not user:
+        raise HTTPException(status_code=401, detail="Cédula no encontrada")
+    
+    if not utils.verify_password(cred.password, user.password):
+        raise HTTPException(status_code=401, detail="Contraseña incorrecta")
+    
     token = utils.create_access_token({"sub": user.id, "rol": user.rol})
-    return {"user": user, "token": token}
+    return {"user": schemas.UsuarioOut.from_orm(user), "token": token}
 
 def verify_admin(token: str):
-    payload = utils.decode_token(token.credentials)
+    payload = utils.decode_token(token)
     if payload.get("rol") != "Administrador":
         raise HTTPException(status_code=403, detail="No autorizado")
 
 def verify_medico(token: str):
-    payload = utils.decode_token(token.credentials)
+    payload = utils.decode_token(token)
     if payload.get("rol") != "Medico":
         raise HTTPException(status_code=403, detail="No autorizado")
 
@@ -65,6 +70,6 @@ def cancelar_cita(db: Session, cita_id: int, user_id: int):
     cita = db.query(models.Cita).filter(models.Cita.id == cita_id).first()
     if not cita or (cita.paciente_id != user_id and cita.medico_id != user_id):
         raise HTTPException(status_code=404, detail="Cita no encontrada")
-    cita.estado = models.EstadoCitaEnum.Cancelada
+    cita.estado = "Cancelada"  # O usa tu Enum
     db.commit()
     return {"detail": "Cita cancelada"}

@@ -1,47 +1,37 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import { usuarioService } from '../services/usuarioService';
+import axios from 'axios';
 
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(null);
+  const [token, setToken] = useState(localStorage.getItem('token'));
 
   useEffect(() => {
-    const stored = localStorage.getItem('token');
-    if (stored) {
-      setToken(stored);
-      // Opcional: validar token con backend
+    if (token) {
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      // Opcional: validar token
     }
-  }, []);
+  }, [token]);
 
-  const login = async (credentials) => {
-    const res = await usuarioService.loginUsuario(credentials);
-    if (res.data.user) {
-      const { user, token } = res.data;
-      setUser(user);
-      setToken(token);
-      localStorage.setItem('token', token); // SENA: persistencia
-    }
-    return res;
-  };
-
-  const register = async (data) => {
-    const res = await usuarioService.registerUsuario(data);
-    if (res.data.success) {
-      return await login({ email: data.cedula, password: data.password });
+  const login = async (email, password) => {
+    const res = await axios.post(`${process.env.REACT_APP_API_URL}/login`, { email, password });
+    if (res.data.token) {
+      localStorage.setItem('token', res.data.token);
+      setToken(res.data.token);
+      setUser(res.data.user);
     }
     return res;
   };
 
   const logout = () => {
-    setUser(null);
-    setToken(null);
     localStorage.removeItem('token');
+    setToken(null);
+    setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, login, register, logout }}>
+    <AuthContext.Provider value={{ user, token, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

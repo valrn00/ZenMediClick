@@ -1,18 +1,24 @@
 import { Container, TextField, Button, Typography, Box } from '@mui/material';
 import { useState } from 'react';
-import { usuarioService } from '../services/usuarioService';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import logo from '../assets/logo.png';
 
-export const ResetPassword = () => {
+export default function ResetPassword() {
+  const [step, setStep] = useState(1);
   const [email, setEmail] = useState('');
-  const [sent, setSent] = useState(false);
+  const [token, setToken] = useState('');
+  const [password, setPassword] = useState('');
   const navigate = useNavigate();
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    await usuarioService.resetPassword(email);
-    setSent(true);
+  const sendToken = async () => {
+    await axios.post(`${process.env.REACT_APP_API_URL}/reset-password`, { email });
+    setStep(2);
+  };
+
+  const confirm = async () => {
+    await axios.post(`${process.env.REACT_APP_API_URL}/reset-password/confirm`, { token, new_password: password });
+    navigate('/login');
   };
 
   return (
@@ -20,25 +26,21 @@ export const ResetPassword = () => {
       <Container maxWidth="xs">
         <Box sx={{ bgcolor: 'white', p: 4, borderRadius: 3, boxShadow: 3, textAlign: 'center' }}>
           <img src={logo} alt="Logo" style={{ width: '80px', marginBottom: '16px' }} />
-          <Typography variant="h5" sx={{ mb: 3, color: '#1e40af' }}>
-            ¿Olvidaste tu contraseña?
-          </Typography>
-          {sent ? (
-            <Typography color="success.main">Revisa tu correo. Te enviamos un enlace para restablecerla.</Typography>
+          <Typography variant="h5" sx={{ mb: 3, color: '#1e40af' }}>Recuperar Contraseña</Typography>
+          {step === 1 ? (
+            <>
+              <TextField fullWidth label="Email" value={email} onChange={(e) => setEmail(e.target.value)} sx={{ mb: 3 }} />
+              <Button fullWidth variant="contained" onClick={sendToken} sx={{ borderRadius: '50px' }}>Enviar Token</Button>
+            </>
           ) : (
             <>
-              <Typography variant="body2" sx={{ mb: 2 }}>Ingresa tu cédula o correo registrado</Typography>
-              <Box component="form" onSubmit={handleSubmit}>
-                <TextField fullWidth label="Cédula o Email" value={email} onChange={e => setEmail(e.target.value)} sx={{ mb: 2 }} />
-                <Button fullWidth variant="contained" type="submit" sx={{ backgroundColor: '#3b82f6', borderRadius: '50px' }}>
-                  Enviar enlace
-                </Button>
-              </Box>
+              <TextField fullWidth label="Token" value={token} onChange={(e) => setToken(e.target.value)} sx={{ mb: 2 }} />
+              <TextField fullWidth label="Nueva Contraseña" type="password" value={password} onChange={(e) => setPassword(e.target.value)} sx={{ mb: 3 }} />
+              <Button fullWidth variant="contained" onClick={confirm} sx={{ borderRadius: '50px' }}>Confirmar</Button>
             </>
           )}
-          <Button onClick={() => navigate('/login')} sx={{ mt: 2 }}>← Volver al login</Button>
         </Box>
       </Container>
     </Box>
   );
-};
+}

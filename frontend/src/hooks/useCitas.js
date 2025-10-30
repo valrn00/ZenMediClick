@@ -1,27 +1,29 @@
 import { useState, useEffect } from 'react';
-import { citasService } from '../services/citasService';
+import axios from 'axios';
 
 export const useCitas = () => {
   const [citas, setCitas] = useState([]);
 
-  const cargarCitas = async () => {
-    const res = await citasService.getCitas();
-    setCitas(res.data);
+  const load = async () => {
+    try {
+      const res = await axios.get(`${process.env.REACT_APP_API_URL}/citas/paciente`);
+      setCitas(res.data);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
-  useEffect(() => {
-    cargarCitas();
-  }, []);
-
-  const agendarCita = async (cita) => {
-    await citasService.agendarCita(cita);
-    cargarCitas();
+  const agendar = async (data) => {
+    await axios.post(`${process.env.REACT_APP_API_URL}/citas`, data);
+    load();
   };
 
-  const cancelarCita = async (id) => {
-    await citasService.cancelarCita(id);
-    cargarCitas();
+  const cancelar = async (id) => {
+    await axios.delete(`${process.env.REACT_APP_API_URL}/citas/${id}`);
+    load();
   };
 
-  return { citas, cargarCitas, agendarCita, cancelarCita };
+  useEffect(() => { load(); }, []);
+
+  return { citas, agendar, cancelar, load };
 };

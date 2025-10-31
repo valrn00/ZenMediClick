@@ -1,12 +1,12 @@
 ﻿import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './hooks/useAuth';
-import { LandingPage } from './components/LandingPage';
-import { Login } from './components/Login';
-import { Registration } from './components/Registration';
-import { ResetPassword } from './components/ResetPassword';
-import { PatientDashboard } from './components/PatientDashboard';
-import { DoctorDashboard } from './components/DoctorDashboard';
-import { AdminDashboard } from './components/AdminDashboard'; // Renombrado de developerDashboard
+import LandingPage from './components/LandingPage';
+import Login from './components/Login';
+import Registration from './components/Registration';
+import ResetPassword from './components/ResetPassword';
+import PatientDashboard from './components/PatientDashboard';
+import DoctorDashboard from './components/DoctorDashboard';
+import AdminDashboard from './components/AdminDashboard';
 
 function App() {
   return (

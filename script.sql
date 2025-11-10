@@ -6,16 +6,15 @@ CREATE TABLE ips (
     nombre VARCHAR(100) NOT NULL
 );
 
+DROP TABLE IF EXISTS usuarios;
+
 CREATE TABLE usuarios (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    nombre VARCHAR(50) NOT NULL,
-    apellido VARCHAR(50),
-    email VARCHAR(100) UNIQUE,
+    nombre VARCHAR(100) NOT NULL,
+    cedula VARCHAR(20),
+    email VARCHAR(100),
     password VARCHAR(255) NOT NULL,
-    rol ENUM('Paciente', 'Medico', 'Administrador') NOT NULL,
-    autorizacion_datos BOOLEAN DEFAULT FALSE,
-    id_ips INT,
-    FOREIGN KEY (id_ips) REFERENCES ips(id)
+    rol ENUM('Paciente', 'Medico', 'Administrador') NOT NULL DEFAULT 'Paciente'
 );
 
 CREATE TABLE pacientes (
@@ -67,3 +66,7 @@ CREATE TABLE disponibilidad (
     id_medico INT,
     FOREIGN KEY (id_medico) REFERENCES medicos(id_usuario)
 );
+
+-- Insertar usuario de prueba para que veas que funciona
+INSERT INTO usuarios (nombre, cedula, email, password, rol) 
+VALUES ('Ana María', '123456789', 'ana@test.com', '123456', 'Paciente');

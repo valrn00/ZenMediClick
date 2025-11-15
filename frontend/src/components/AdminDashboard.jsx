@@ -1,20 +1,29 @@
+import { useState, useEffect } from 'react';
 import { Container, Typography, Card, CardContent, Button, Table, TableBody, TableCell, TableHead, TableRow } from '@mui/material';
-import { useAuth } from '../hooks/useAuth';
-import axios from 'axios';
-import { useEffect, useState } from 'react';
 
 export default function AdminDashboard() {
-  const { user, logout } = useAuth();
   const [usuarios, setUsuarios] = useState([]);
+  const token = localStorage.getItem('token');
 
   useEffect(() => {
-    axios.get(`${process.env.REACT_APP_API_URL}/users`).then(res => setUsuarios(res.data));
-  }, []);
+    fetch('http://localhost/backend/main.php/users', {
+      headers: { 'Authorization': token }
+    })
+    .then(r => r.json())
+    .then(setUsuarios);
+  }, [token]);
+
+  const eliminar = async (id) => {
+    await fetch(`http://localhost/backend/main.php/users/${id}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': token }
+    });
+    setUsuarios(usuarios.filter(u => u.id !== id));
+  };
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Typography variant="h4" sx={{ mb: 4, color: '#1e40af' }}>Admin: {user?.nombre}</Typography>
-
+      <Typography variant="h4" sx={{ mb: 4, color: '#1e40af' }}>Panel Admin</Typography>
       <Card sx={{ boxShadow: 3 }}>
         <CardContent>
           <Typography variant="h6" sx={{ mb: 2 }}>Gestión de Usuarios</Typography>
@@ -32,7 +41,7 @@ export default function AdminDashboard() {
                   <TableCell>{u.nombre}</TableCell>
                   <TableCell>{u.rol}</TableCell>
                   <TableCell>
-                    <Button size="small" color="error">Eliminar</Button>
+                    <Button size="small" color="error" onClick={() => eliminar(u.id)}>Eliminar</Button>
                   </TableCell>
                 </TableRow>
               ))}
@@ -40,8 +49,6 @@ export default function AdminDashboard() {
           </Table>
         </CardContent>
       </Card>
-
-      <Button onClick={logout} sx={{ mt: 4, float: 'right' }}>Cerrar Sesión</Button>
     </Container>
   );
 }

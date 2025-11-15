@@ -1,21 +1,26 @@
-import { Container, TextField, Button, Typography, Box, Link } from '@mui/material';
 import { useState } from 'react';
+import { Container, TextField, Button, Typography, Box, Link } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
 import logo from '../assets/logo.png';
 
 export default function Login() {
-  const [form, setForm] = useState({ email: '', password: '' });
-  const { login } = useAuth();
+  const [form, setForm] = useState({ cedula: '', password: '' });
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const res = await login(form.email, form.password);
-    if (res.data.token) {
-      navigate('/dashboard');
+    const res = await fetch('http://localhost/backend/main.php/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(form)
+    });
+    const data = await res.json();
+    if (data.success) {
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+      navigate('/dashboard'); // Redirecciona a App.jsx que decide el dashboard
     } else {
-      alert('Credenciales incorrectas');
+      alert(data.error);
     }
   };
 
@@ -26,7 +31,7 @@ export default function Login() {
           <img src={logo} alt="Logo" style={{ width: '80px', marginBottom: '16px' }} />
           <Typography variant="h5" sx={{ mb: 3, color: '#1e40af' }}>Iniciar Sesión</Typography>
           <Box component="form" onSubmit={handleSubmit}>
-            <TextField fullWidth label="Cédula o Email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} sx={{ mb: 2 }} />
+            <TextField fullWidth label="Cédula o Email" value={form.cedula} onChange={(e) => setForm({ ...form, cedula: e.target.value })} sx={{ mb: 2 }} />
             <TextField fullWidth label="Contraseña" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} sx={{ mb: 3 }} />
             <Button fullWidth variant="contained" type="submit" sx={{ borderRadius: '50px', py: 1.5 }}>Entrar</Button>
           </Box>

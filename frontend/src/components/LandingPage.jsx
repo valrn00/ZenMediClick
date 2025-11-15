@@ -23,10 +23,20 @@ export default function LandingPage() {
               Bienvenidos a ZenMediClick. Agendar tus citas médicas ahora es más rápido, fácil y personalizado.
             </Typography>
             <Box sx={{ display: 'flex', gap: 2 }}>
-              <Button variant="contained" size="large" sx={{ borderRadius: '50px', px: 4 }} onClick={() => navigate('/login')}>
+              <Button 
+                variant="contained" 
+                size="large" 
+                sx={{ borderRadius: '50px', px: 4 }} 
+                onClick={() => navigate('/login')}
+              >
                 Iniciar sesión
               </Button>
-              <Button variant="contained" size="large" sx={{ borderRadius: '50px', px: 4 }} onClick={() => navigate('/register')}>
+              <Button 
+                variant="contained" 
+                size="large" 
+                sx={{ borderRadius: '50px', px: 4 }} 
+                onClick={() => navigate('/register')}
+              >
                 Registrarse
               </Button>
             </Box>

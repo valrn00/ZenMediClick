@@ -1,39 +1,56 @@
-import { Container, Grid, Card, CardContent, Typography, Button, Table, TableBody, TableCell, TableHead, TableRow, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
-import { useAuth } from '../hooks/useAuth';
-import { useCitas } from '../hooks/useCitas';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { Container, Grid, Card, CardContent, Typography, Button, Table, TableBody, TableCell, TableHead, TableRow, Dialog, DialogTitle, DialogContent, DialogActions, TextField } from '@mui/material';
 import jsPDF from 'jspdf';
 
 export default function PatientDashboard() {
-  const { user, logout } = useAuth();
-  const { citas, agendar, cancelar } = useCitas();
+  const [citas, setCitas] = useState([]);
   const [open, setOpen] = useState(false);
-  const [nueva, setNueva] = useState({ medico: '', fecha: '', motivo: '' });
+  const [nueva, setNueva] = useState({ fecha: '', hora: '', motivo: '' });
+  const token = localStorage.getItem('token');
 
-  const handleAgendar = () => {
-    agendar(nueva);
+  useEffect(() => {
+    fetch('http://localhost/backend/main.php/citas', {
+      headers: { 'Authorization': token }
+    })
+    .then(r => r.json())
+    .then(setCitas);
+  }, [token]);
+
+  const agendar = async () => {
+    await fetch('http://localhost/backend/main.php/citas', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': token },
+      body: JSON.stringify({ ...nueva, id_medico: 1 })
+    });
     setOpen(false);
-    setNueva({ medico: '', fecha: '', motivo: '' });
+    window.location.reload();
   };
 
-  const generarConstancia = (cita) => {
+  const cancelar = async (id) => {
+    await fetch('http://localhost/backend/main.php/citas/cancelar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': token },
+      body: JSON.stringify({ id })
+    });
+    setCitas(citas.filter(c => c.id !== id));
+  };
+
+  const generarPDF = (cita) => {
     const doc = new jsPDF();
-    doc.text(`Constancia de Cita`, 20, 20);
-    doc.text(`Paciente: ${user.nombre}`, 20, 30);
-    doc.text(`Médico: ${cita.medico}`, 20, 40);
-    doc.text(`Fecha: ${cita.fecha}`, 20, 50);
+    doc.text("Constancia de Cita", 20, 20);
+    doc.text(`Paciente: ${JSON.parse(localStorage.getItem('user')).nombre}`, 20, 30);
+    doc.text(`Fecha: ${cita.fecha}`, 20, 40);
     doc.save('constancia.pdf');
   };
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Typography variant="h4" sx={{ mb: 4, color: '#1e40af' }}>Hola, {user?.nombre}</Typography>
+      <Typography variant="h4" sx={{ mb: 4, color: '#1e40af' }}>Mis Citas</Typography>
 
       <Grid container spacing={3}>
         <Grid item xs={12} md={6}>
           <Card sx={{ boxShadow: 3 }}>
             <CardContent>
-              <Typography variant="h6" sx={{ mb: 2 }}>Agendar Cita</Typography>
               <Button fullWidth variant="contained" onClick={() => setOpen(true)}>Nueva Cita</Button>
             </CardContent>
           </Card>
@@ -42,12 +59,10 @@ export default function PatientDashboard() {
         <Grid item xs={12}>
           <Card sx={{ boxShadow: 3 }}>
             <CardContent>
-              <Typography variant="h6" sx={{ mb: 2 }}>Mis Citas</Typography>
               <Table>
                 <TableHead>
                   <TableRow>
                     <TableCell>Fecha</TableCell>
-                    <TableCell>Médico</TableCell>
                     <TableCell>Estado</TableCell>
                     <TableCell>Acciones</TableCell>
                   </TableRow>
@@ -55,12 +70,11 @@ export default function PatientDashboard() {
                 <TableBody>
                   {citas.map((c) => (
                     <TableRow key={c.id}>
-                      <TableCell>{c.fecha}</TableCell>
-                      <TableCell>{c.medico}</TableCell>
+ aina                      <TableCell>{c.fecha}</TableCell>
                       <TableCell>{c.estado}</TableCell>
                       <TableCell>
                         <Button size="small" color="error" onClick={() => cancelar(c.id)}>Cancelar</Button>
-                        <Button size="small" onClick={() => generarConstancia(c)}>PDF</Button>
+                        <Button size="small" onClick={() => generarPDF(c)}>PDF</Button>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -71,18 +85,16 @@ export default function PatientDashboard() {
         </Grid>
       </Grid>
 
-      <Button onClick={logout} sx={{ mt: 4, float: 'right' }}>Cerrar Sesión</Button>
-
       <Dialog open={open} onClose={() => setOpen(false)}>
         <DialogTitle>Agendar Cita</DialogTitle>
         <DialogContent>
-          <TextField fullWidth label="Médico" value={nueva.medico} onChange={(e) => setNueva({ ...nueva, medico: e.target.value })} sx={{ mb: 2 }} />
-          <TextField fullWidth type="date" value={nueva.fecha} onChange={(e) => setNueva({ ...nueva, fecha: e.target.value })} sx={{ mb: 2 }} />
-          <TextField fullWidth label="Motivo" multiline rows={2} value={nueva.motivo} onChange={(e) => setNueva({ ...nueva, motivo: e.target.value })} />
+          <TextField fullWidth label="Fecha" type="date" value={nueva.fecha} onChange={(e) => setNueva({ ...nueva, fecha: e.target.value })} sx={{ mb: 2 }} />
+          <TextField fullWidth label="Hora" type="time" value={nueva.hora} onChange={(e) => setNueva({ ...nueva, hora: e.target.value })} sx={{ mb: 2 }} />
+          <TextField fullWidth label="Motivo" value={nueva.motivo} onChange={(e) => setNueva({ ...nueva, motivo: e.target.value })} />
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpen(false)}>Cancelar</Button>
-          <Button onClick={handleAgendar} variant="contained">Agendar</Button>
+          <Button onClick={agendar} variant="contained">Agendar</Button>
         </DialogActions>
       </Dialog>
     </Container>

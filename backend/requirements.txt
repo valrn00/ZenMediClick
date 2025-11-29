@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+SQLAlchemy>=1.4
+pymysql
+python-jose[cryptography]
+passlib[bcrypt]
+python-dotenv
+apscheduler
+fastapi-mail
+email-validator
+python-multipart

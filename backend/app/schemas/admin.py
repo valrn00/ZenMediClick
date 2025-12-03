@@ -1,18 +1,11 @@
-from pydantic import BaseModel
+from sqlalchemy import Column, Integer, String
+from app.database import Base
 
-class AdminBase(BaseModel):
-    nombre: str
-    email: str
+class Admin(Base):
+    __tablename__ = "admins"
 
-class AdminCreate(AdminBase):
-    password: str
+    id = Column(Integer, primary_key=True, index=True)
+    nombre = Column(String(100), nullable=False)
+    email = Column(String(200), unique=True, index=True, nullable=False)
+    password = Column(String(200), nullable=False)
 
-class AdminLogin(BaseModel):
-    email: str
-    password: str
-
-class AdminOut(AdminBase):
-    id: int
-
-    class Config:
-        orm_mode = True

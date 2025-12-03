@@ -16,7 +16,7 @@ export default function Login() {
     setIsLoading(true); // Activar estado de carga
 
     try {
-      const res = await fetch('http://127.0.0.1:8000/main.php/login', {
+      const res = await fetch("https://zenmediclick.onrender.com/auth/login", {
         x
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

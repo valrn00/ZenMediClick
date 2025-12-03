@@ -21,7 +21,7 @@ export default function Registration() {
       return;
     }
 
-    const res = await fetch('http://localhost/backend/main.php/register', {
+    const res = await fetch("https://zenmediclick.onrender.com/auth/register", {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(form)

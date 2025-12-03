@@ -24,3 +24,14 @@ settings = Settings(
     DATABASE_URL=os.getenv("DATABASE_URL", ""),
     SECRET_KEY=os.getenv("SECRET_KEY", "")
 )
+from sqlalchemy import Column, Integer, String
+from app.database import Base
+
+class Usuario(Base):
+    __tablename__ = "usuarios"
+
+    id = Column(Integer, primary_key=True, index=True)
+    nombre = Column(String)
+    email = Column(String, unique=True, index=True)
+    password = Column(String)
+    rol = Column(String)

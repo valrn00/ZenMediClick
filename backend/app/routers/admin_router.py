@@ -1,9 +1,13 @@
-from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
-from database import get_db
 from schemas.admin import AdminCreate, AdminLogin, AdminOut
 from utils.auth_admin import admin_login, admin_register
 from utils.admin_role import require_admin
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+from app.database import get_db
+from app.models.admin import Admin
+from app.utils.auth_admin import admin_login, admin_register
+from app.utils.admin_role import require_admin
+
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
 

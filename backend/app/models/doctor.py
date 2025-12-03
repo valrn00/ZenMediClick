@@ -1,9 +1,9 @@
-from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy import Column, Integer, String
 from app.database import Base
 
 class Medico(Base):
     __tablename__ = "medicos"
 
-    id_usuario = Column(Integer, ForeignKey("usuarios.id"), primary_key=True)
+    id = Column(Integer, primary_key=True, index=True)
+    nombre = Column(String(100))
     especialidad = Column(String(100))
-    id_ips = Column(Integer, ForeignKey("ips.id"), nullable=True)

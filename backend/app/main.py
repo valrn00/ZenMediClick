@@ -1,17 +1,17 @@
 from fastapi import FastAPI
-from app.routers import auth, citas, disponibilidad
-from app.database import Base, engine
-from app import models
 
+from app.routers import consultorios, pacientes, medicos, citas  # los que tengas
 
-app = FastAPI(title="ZenMediClick")
-
-Base.metadata.create_all(bind=engine)
-
-app.include_router(auth.router)
-app.include_router(citas.router)
-app.include_router(disponibilidad.router)
-
+app = FastAPI(
+    title="ZenMediClick API",
+    version="1.0.0"
+)
 @app.get("/")
 def root():
-    return {"Backend ZenMediClick funcionando sin correos"}
+    return {"message": "ZenMediClick API funcionando correctamente 🚀"}
+
+
+app.include_router(consultorios.router)
+app.include_router(pacientes.router)
+app.include_router(medicos.router)
+app.include_router(citas.router)

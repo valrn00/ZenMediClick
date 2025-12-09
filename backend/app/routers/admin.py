@@ -6,47 +6,47 @@ from app.models.consultorio import Consultorio
 from app.models.availability import Disponibilidad
 from app.models.appointment import Cita
 
-from app.utils.security import get_current_user
+# -------- SIMULACIÓN DE USUARIO AUTENTICADO (solo para pruebas) --------
+def get_current_user():
+    return {"id": 1, "role": "admin"}
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
-def verify_admin(user: Usuario):
-    if user.rol != "admin":
+# -------- Verificación de Rol --------
+def verify_admin(user: dict):
+    if user["role"] != "admin":
         raise HTTPException(status_code=403, detail="No tienes permisos de administrador")
 
+# -------- PANEL --------
+@router.get("/panel")
+def admin_panel(current_user: dict = Depends(get_current_user)):
+    return {
+        "message": "Panel de administración activo",
+        "usuario": current_user
+    }
 
-# -------------------------------
-# 📌 USUARIOS
-# -------------------------------
+# -------- USUARIOS --------
 @router.get("/usuarios")
-def listar_usuarios(db: Session = Depends(get_db), user: Usuario = Depends(get_current_user)):
-    verify_admin(user)
+def listar_usuarios(db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
+    verify_admin(current_user)
     return db.query(Usuario).all()
 
-
 @router.delete("/usuarios/{user_id}")
-def eliminar_usuario(user_id: int, 
-                     db: Session = Depends(get_db), 
-                     user: Usuario = Depends(get_current_user)):
-    verify_admin(user)
-    usuario = db.query(Usuario).filter(Usuario.id == user_id).first()
+def eliminar_usuario(user_id: int, db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
+    verify_admin(current_user)
 
+    usuario = db.query(Usuario).filter(Usuario.id == user_id).first()
     if not usuario:
-        raise HTTPException(404, "Usuario no encontrado")
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
     db.delete(usuario)
     db.commit()
-    return {"message": "Usuario eliminado"}
+    return {"message": "Usuario eliminado correctamente"}
 
-
-# -------------------------------
-# 📌 CONSULTORIOS
-# -------------------------------
+# -------- CONSULTORIOS --------
 @router.post("/consultorios")
-def crear_consultorio(nombre: str, 
-                      db: Session = Depends(get_db), 
-                      user: Usuario = Depends(get_current_user)):
-    verify_admin(user)
+def crear_consultorio(nombre: str, db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
+    verify_admin(current_user)
 
     consultorio = Consultorio(nombre=nombre)
     db.add(consultorio)
@@ -54,16 +54,12 @@ def crear_consultorio(nombre: str,
     db.refresh(consultorio)
     return consultorio
 
-
 @router.get("/consultorios")
-def listar_consultorios(db: Session = Depends(get_db), user: Usuario = Depends(get_current_user)):
-    verify_admin(user)
+def listar_consultorios(db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
+    verify_admin(current_user)
     return db.query(Consultorio).all()
 
-
-# -------------------------------
-# 📌 DISPONIBILIDAD
-# -------------------------------
+# -------- DISPONIBILIDAD --------
 @router.post("/disponibilidad")
 def crear_disponibilidad(
     doctor_id: int,
@@ -71,9 +67,9 @@ def crear_disponibilidad(
     hora_inicio: str,
     hora_fin: str,
     db: Session = Depends(get_db),
-    user: Usuario = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user)
 ):
-    verify_admin(user)
+    verify_admin(current_user)
 
     disp = Disponibilidad(
         medico_id=doctor_id,
@@ -86,30 +82,25 @@ def crear_disponibilidad(
     db.refresh(disp)
     return disp
 
-
 @router.get("/disponibilidad")
-def ver_disponibilidad(db: Session = Depends(get_db), user: Usuario = Depends(get_current_user)):
-    verify_admin(user)
+def ver_disponibilidad(db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
+    verify_admin(current_user)
     return db.query(Disponibilidad).all()
 
-
-# -------------------------------
-# 📌 CITAS
-# -------------------------------
+# -------- CITAS --------
 @router.get("/citas")
-def listar_citas(db: Session = Depends(get_db), user: Usuario = Depends(get_current_user)):
-    verify_admin(user)
+def listar_citas(db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
+    verify_admin(current_user)
     return db.query(Cita).all()
 
-
 @router.delete("/citas/{cita_id}")
-def cancelar_cita(cita_id: int, db: Session = Depends(get_db), user: Usuario = Depends(get_current_user)):
-    verify_admin(user)
-    cita = db.query(Cita).filter(Cita.id == cita_id).first()
+def cancelar_cita(cita_id: int, db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
+    verify_admin(current_user)
 
+    cita = db.query(Cita).filter(Cita.id == cita_id).first()
     if not cita:
-        raise HTTPException(404, "Cita no encontrada")
+        raise HTTPException(status_code=404, detail="Cita no encontrada")
 
     db.delete(cita)
     db.commit()
-    return {"message": "Cita cancelada"}
+    return {"message": "Cita cancelada correctamente"}

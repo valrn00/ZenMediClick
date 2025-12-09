@@ -15,6 +15,7 @@ def register(nombre: str, email: str, password: str, db: Session = Depends(get_d
     nuevo = Usuario(
         nombre=nombre,
         email=email,
+        cedula="cedula",
         password=hash_password(password),
         rol="paciente"
     )

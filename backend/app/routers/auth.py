@@ -17,8 +17,9 @@ router = APIRouter(prefix="/auth", tags=["Auth"])
 class RegisterSchema(BaseModel):
     nombre: str
     email: str
+    cedula: str
     password: str
-    rol: str = "paciente"
+    rol: str
 
 class LoginSchema(BaseModel):
     email: str
@@ -40,13 +41,25 @@ def create_access_token(data: dict):
 # -------------------------------
 @router.post("/register")
 def register(body: RegisterSchema, db: Session = Depends(get_db)):
-    exists = db.query(Usuario).filter(Usuario.email == body.email).first()
-    if exists:
-        raise HTTPException(400, "El email ya está registrado")
+    # VALIDAR ROL PERMITIDO
+    if body.rol not in ["Paciente", "Medico"]:
+        raise HTTPException(status_code=400, detail="Rol no permitido para registro")
 
+    # VALIDAR EMAIL
+    exists_email = db.query(Usuario).filter(Usuario.email == body.email).first()
+    if exists_email:
+        raise HTTPException(status_code=400, detail="El email ya está registrado")
+
+    # VALIDAR CÉDULA
+    exists_cedula = db.query(Usuario).filter(Usuario.cedula == body.cedula).first()
+    if exists_cedula:
+        raise HTTPException(status_code=400, detail="La cédula ya está registrada")
+
+    # CREAR USUARIO
     user = Usuario(
         nombre=body.nombre,
         email=body.email,
+        cedula=body.cedula,
         password=hash_password(body.password),
         rol=body.rol
     )
@@ -55,7 +68,11 @@ def register(body: RegisterSchema, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(user)
 
-    return {"success": True, "msg": "Usuario creado", "user": {"id": user.id, "nombre": user.nombre}}
+    return {
+        "success": True,
+        "msg": "Usuario creado correctamente",
+        "user": {"id": user.id, "nombre": user.nombre}
+    }
 
 
 @router.post("/login")

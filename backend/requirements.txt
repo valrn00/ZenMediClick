@@ -1,0 +1,12 @@
+fastapi
+uvicorn[standard]
+SQLAlchemy>=1.4
+pymysql
+python-dotenv
+passlib[bcrypt]
+python-jose[cryptography]
+pydantic
+pydantic-settings
+reportlab
+python-multipart
+apispec    # optional for docs, not mandatory

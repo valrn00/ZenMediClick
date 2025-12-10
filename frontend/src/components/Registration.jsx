@@ -7,18 +7,19 @@ import {
     Box, 
     Alert, 
     CircularProgress,
-    FormControlLabel, // Nuevo para envolver Checkbox
+    FormControlLabel, 
     Checkbox,
     Link,
-    IconButton // Para el icono de visibilidad de contraseña
+    IconButton 
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
-import InputAdornment from '@mui/material/InputAdornment'; // Para el icono
-import logo from '../assets/logo.png';
+import InputAdornment from '@mui/material/InputAdornment'; 
+import logo from '../assets/logo.png'; // Asegúrate de que esta ruta sea correcta
 
-const API_REGISTER = "https://zenmediclick.onrender.com/auth/register";
+// CÓDIGO CORREGIDO (DEBE SER ASÍ)
+const API_REGISTER = "http://localhost:8000/auth/register";
 
 export default function Registration() {
     const [form, setForm] = useState({ 
@@ -26,8 +27,8 @@ export default function Registration() {
         cedula: '', 
         email: '', 
         password: '', 
-        rol: 'paciente', // Fijo: solo se permite auto-registro como paciente
-        autorizacion: false 
+        rol: 'paciente', 
+        autorizacion: false // Estado inicial del checkbox
     });
     const [errorMsg, setErrorMsg] = useState('');
     const [successMsg, setSuccessMsg] = useState('');
@@ -41,21 +42,19 @@ export default function Registration() {
     };
 
     const validateForm = () => {
-        // Validación de campos obligatorios
         if (!form.nombre || !form.cedula || !form.email || !form.password) {
             setErrorMsg('Todos los campos son obligatorios.');
             return false;
         }
-        // Validación de email básico
         if (!/\S+@\S+\.\S+/.test(form.email)) {
             setErrorMsg('El formato del email no es válido.');
             return false;
         }
-        // Validación de longitud mínima de contraseña (ej. 6 caracteres)
         if (form.password.length < 6) {
             setErrorMsg('La contraseña debe tener al menos 6 caracteres.');
             return false;
         }
+        // VALIDACIÓN DEL CHECKBOX
         if (!form.autorizacion) {
             setErrorMsg('Debes autorizar el tratamiento de datos para continuar.');
             return false;
@@ -75,8 +74,13 @@ export default function Registration() {
         setSuccessMsg('');
 
         try {
-            // Aseguramos que el rol siempre sea paciente para auto-registro
-            const dataToSend = { ...form, rol: 'paciente' }; 
+            // Aseguramos que solo enviamos los 4 campos esperados por FastAPI
+            const dataToSend = { 
+                nombre: form.nombre, 
+                cedula: form.cedula,
+                email: form.email, 
+                password: form.password 
+            }; 
             
             const res = await fetch(API_REGISTER, {
                 method: 'POST',
@@ -86,12 +90,24 @@ export default function Registration() {
             
             const data = await res.json();
 
-            if (res.ok && data.success) { 
+            if (res.ok) { 
                 setSuccessMsg('Registro exitoso. Serás redirigido a Iniciar Sesión.');
-                setTimeout(() => navigate('/login'), 2000); // Redirigir después de 2s
+                setTimeout(() => navigate('/login'), 2000); 
             } else {
-                // Capturar errores del backend (ej. cédula o email ya existen)
-                setErrorMsg(data.error || data.message || 'Error al registrarse. Intenta de nuevo.');
+                // CORRECCIÓN CLAVE: Manejo del objeto 'detail' de FastAPI
+                let message = data.error || data.message || 'Error al registrarse. Intenta de nuevo.';
+                
+                if (data.detail) {
+                    if (Array.isArray(data.detail)) {
+                        // Formatear errores de validación (422)
+                        message = data.detail.map(err => `${err.loc.join('.')}: ${err.msg}`).join('; ');
+                    } else if (typeof data.detail === 'string') {
+                        // Usar el string de error del backend (ej. "El correo ya está registrado")
+                        message = data.detail;
+                    }
+                }
+                
+                setErrorMsg(message);
             }
         } catch (error) {
             console.error("Error de conexión:", error);
@@ -126,41 +142,13 @@ export default function Registration() {
                     <Typography variant="h5" sx={{ mb: 3, color: '#1e40af', fontWeight: 'bold' }}>Crear Cuenta</Typography>
                     <Box component="form" onSubmit={handleSubmit}>
                         
-                        {/* Mensajes de retroalimentación */}
                         {errorMsg && <Alert severity="error" sx={{ mb: 2 }}>{errorMsg}</Alert>}
                         {successMsg && <Alert severity="success" sx={{ mb: 2 }}>{successMsg}</Alert>}
 
-                        <TextField 
-                            fullWidth 
-                            required
-                            label="Nombre Completo" 
-                            name="nombre"
-                            value={form.nombre} 
-                            onChange={handleInputChange} 
-                            sx={{ mb: 2 }} 
-                        />
-                        <TextField 
-                            fullWidth 
-                            required
-                            label="Cédula" 
-                            name="cedula"
-                            value={form.cedula} 
-                            onChange={handleInputChange} 
-                            sx={{ mb: 2 }} 
-                            inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }} // Sugerir teclado numérico
-                        />
-                        <TextField 
-                            fullWidth 
-                            required
-                            label="Email" 
-                            name="email"
-                            type="email"
-                            value={form.email} 
-                            onChange={handleInputChange} 
-                            sx={{ mb: 2 }} 
-                        />
+                        <TextField fullWidth required label="Nombre Completo" name="nombre" value={form.nombre} onChange={handleInputChange} sx={{ mb: 2 }} />
+                        <TextField fullWidth required label="Cédula" name="cedula" value={form.cedula} onChange={handleInputChange} sx={{ mb: 2 }} inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }} />
+                        <TextField fullWidth required label="Email" name="email" type="email" value={form.email} onChange={handleInputChange} sx={{ mb: 2 }} />
                         
-                        {/* Campo de Contraseña con visibilidad */}
                         <TextField 
                             fullWidth 
                             required
@@ -185,9 +173,6 @@ export default function Registration() {
                             }}
                         />
                         
-                        {/* Se eliminó el Select de rol, el rol es fijo: Paciente */}
-                        
-                        {/* Checkbox de Autorización de Datos */}
                         <FormControlLabel
                             control={
                                 <Checkbox 

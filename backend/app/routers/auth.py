@@ -11,6 +11,14 @@ from app.settings import settings
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
+# ...
+
+@router.post("/register") # -> URL completa: /auth/register
+# ...
+
+@router.post("/login")    # -> URL completa: /auth/login
+# ...
+
 # -------------------------------
 #   MODELOS DE PETICIÓN
 # -------------------------------

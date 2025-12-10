@@ -3,8 +3,8 @@ import { Container, TextField, Button, Typography, Box, Link, Alert, CircularPro
 import { useNavigate } from 'react-router-dom';
 import logo from '../assets/logo.png';
 
-const API_LOGIN = "https://zenmediclick.onrender.com/auth/login";
-
+// EN LOGIN.JSX
+const API_REGISTER = "http://localhost:8000/auth/register";
 export default function Login() {
   const [form, setForm] = useState({ cedula: '', password: '' });
   const [errorMsg, setErrorMsg] = useState('');
@@ -17,7 +17,7 @@ export default function Login() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     // VALIDACIÓN 1: Verificar que los campos no estén vacíos
     if (!form.cedula || !form.password) {
       setErrorMsg('Por favor, ingresa tu cédula/email y contraseña.');
@@ -55,29 +55,29 @@ export default function Login() {
   };
 
   return (
-    <Box 
-      sx={{ 
-        minHeight: '100vh', 
-        background: 'linear-gradient(135deg, #e0f2fe 0%, #a7f3d0 100%)', 
-        display: 'flex', 
+    <Box
+      sx={{
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #e0f2fe 0%, #a7f3d0 100%)',
+        display: 'flex',
         alignItems: 'center',
         justifyContent: 'center', // Centrar horizontalmente
         py: 4 // Padding vertical para evitar que el contenido se pegue en pantallas pequeñas
       }}
     >
       <Container maxWidth="xs">
-        <Box 
-          sx={{ 
-            bgcolor: 'white', 
-            p: 4, 
-            borderRadius: 3, 
+        <Box
+          sx={{
+            bgcolor: 'white',
+            p: 4,
+            borderRadius: 3,
             boxShadow: 6, // Un poco más de sombra para que destaque
-            textAlign: 'center' 
+            textAlign: 'center'
           }}
         >
           <img src={logo} alt="Logo ZenMediClick" style={{ width: '80px', marginBottom: '16px' }} />
           <Typography variant="h5" sx={{ mb: 3, color: '#1e40af', fontWeight: 'bold' }}>Bienvenido</Typography>
-          
+
           <Box component="form" onSubmit={handleSubmit}>
 
             {/* Mostrar mensaje de error si existe */}
@@ -116,26 +116,26 @@ export default function Login() {
               {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Entrar'}
             </Button>
           </Box>
-          
+
           <Box sx={{ mt: 3, display: 'flex', justifyContent: 'space-between' }}>
             {/* USO DE NAVIGATE: Más idiomático con React Router */}
-            <Link 
-                component="button" 
-                onClick={() => navigate('/registration')} 
-                underline="hover" 
-                color="#3b82f6" 
-                sx={{ cursor: 'pointer', fontSize: '0.875rem' }}
+            <Link
+              component="button"
+              onClick={() => navigate('/registration')}
+              underline="hover"
+              color="#3b82f6"
+              sx={{ cursor: 'pointer', fontSize: '0.875rem' }}
             >
-                Registrarse
+              Registrarse
             </Link>
-            <Link 
-                component="button" 
-                onClick={() => navigate('/reset-password')} 
-                underline="hover" 
-                color="#3b82f6" 
-                sx={{ cursor: 'pointer', fontSize: '0.875rem' }}
+            <Link
+              component="button"
+              onClick={() => navigate('/reset-password')}
+              underline="hover"
+              color="#3b82f6"
+              sx={{ cursor: 'pointer', fontSize: '0.875rem' }}
             >
-                ¿Olvidaste tu contraseña?
+              ¿Olvidaste tu contraseña?
             </Link>
           </Box>
         </Box>

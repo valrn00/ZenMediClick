@@ -12,9 +12,15 @@ import {
   TableHead,
   TableRow,
   Grid,
+  // Nuevos imports para el Select de Material-UI
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from "@mui/material";
 
 const API = "http://localhost:8000/admin";
+const ROLES = ["admin", "doctor", "paciente"]; // Roles permitidos
 
 export default function AdminDashboard() {
   const [usuarios, setUsuarios] = useState([]);
@@ -26,11 +32,11 @@ export default function AdminDashboard() {
   const [nuevoUsuario, setNuevoUsuario] = useState({
     nombre: "",
     email: "",
-    rol: "",
+    rol: "", // Inicializado vacío
   });
 
   // -------------------------------
-  //       CARGAR DATOS
+  // 	 	CARGAR DATOS
   // -------------------------------
   useEffect(() => {
     cargarUsuarios();
@@ -40,8 +46,13 @@ export default function AdminDashboard() {
   }, []);
 
   const cargarUsuarios = async () => {
-    const r = await fetch(`${API}/usuarios`);
-    setUsuarios(await r.json());
+    try {
+      const r = await fetch(`${API}/usuarios`);
+      setUsuarios(await r.json());
+    } catch (error) {
+      console.error("Error cargando usuarios:", error);
+      // Podrías añadir un estado para mostrar un mensaje de error al usuario
+    }
   };
 
   const cargarConsultorios = async () => {
@@ -60,26 +71,42 @@ export default function AdminDashboard() {
   };
 
   // -------------------------------
-  //   CREAR USUARIO (POST)
+  // 	CREAR USUARIO (POST)
   // -------------------------------
   const crearUsuario = async () => {
-    await fetch(`${API}/usuarios`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(nuevoUsuario),
-    });
+    if (!nuevoUsuario.nombre || !nuevoUsuario.email || !nuevoUsuario.rol) {
+      alert("Por favor, complete todos los campos.");
+      return;
+    }
 
-    cargarUsuarios();
+    try {
+      const response = await fetch(`${API}/usuarios`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(nuevoUsuario),
+      });
 
-    setNuevoUsuario({ nombre: "", email: "", rol: "" });
+      if (response.ok) {
+        cargarUsuarios(); // Recargar la lista
+        setNuevoUsuario({ nombre: "", email: "", rol: "" }); // Resetear formulario
+      } else {
+        const errorData = await response.json();
+        alert(`Error al crear usuario: ${errorData.message || response.statusText}`);
+      }
+    } catch (error) {
+      console.error("Error en la solicitud POST:", error);
+      alert("Error de conexión al crear usuario.");
+    }
   };
 
   // -------------------------------
-  //   ELIMINAR USUARIO (DELETE)
+  // 	ELIMINAR USUARIO (DELETE)
   // -------------------------------
   const eliminarUsuario = async (id) => {
-    await fetch(`${API}/usuarios/${id}`, { method: "DELETE" });
-    cargarUsuarios();
+    if (window.confirm("¿Está seguro de que desea eliminar este usuario?")) {
+      await fetch(`${API}/usuarios/${id}`, { method: "DELETE" });
+      cargarUsuarios();
+    }
   };
 
   return (
@@ -111,6 +138,7 @@ export default function AdminDashboard() {
               <TextField
                 fullWidth
                 label="Email"
+                type="email" // Añadimos el tipo email
                 value={nuevoUsuario.email}
                 onChange={(e) =>
                   setNuevoUsuario({ ...nuevoUsuario, email: e.target.value })
@@ -118,16 +146,27 @@ export default function AdminDashboard() {
               />
             </Grid>
 
+            {/* CAMBIO CLAVE: Reemplazamos TextField por Select */}
             <Grid item xs={12} md={3}>
-              <TextField
-                fullWidth
-                label="Rol (admin/doctor/paciente)"
-                value={nuevoUsuario.rol}
-                onChange={(e) =>
-                  setNuevoUsuario({ ...nuevoUsuario, rol: e.target.value })
-                }
-              />
+              <FormControl fullWidth>
+                <InputLabel id="select-rol-label">Rol</InputLabel>
+                <Select
+                  labelId="select-rol-label"
+                  label="Rol"
+                  value={nuevoUsuario.rol}
+                  onChange={(e) =>
+                    setNuevoUsuario({ ...nuevoUsuario, rol: e.target.value })
+                  }
+                >
+                  {ROLES.map((rol) => (
+                    <MenuItem key={rol} value={rol}>
+                      {rol.charAt(0).toUpperCase() + rol.slice(1)} {/* Muestra el rol con mayúscula inicial */}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
             </Grid>
+            {/* FIN DEL CAMBIO */}
 
             <Grid item xs={12} md={3}>
               <Button
@@ -135,6 +174,7 @@ export default function AdminDashboard() {
                 variant="contained"
                 onClick={crearUsuario}
                 sx={{ height: "100%" }}
+                disabled={!nuevoUsuario.nombre || !nuevoUsuario.email || !nuevoUsuario.rol} // Deshabilitar si faltan campos
               >
                 Crear Usuario
               </Button>
@@ -172,7 +212,7 @@ export default function AdminDashboard() {
         </CardContent>
       </Card>
 
-      {/* ---------- CONSULTORIOS ---------- */}
+      {/* El resto de las secciones (Consultorios, Disponibilidad, Citas) se mantienen igual por ahora */}
       <Card sx={{ mb: 4, boxShadow: 3 }}>
         <CardContent>
           <Typography variant="h6">Consultorios</Typography>
@@ -196,7 +236,6 @@ export default function AdminDashboard() {
         </CardContent>
       </Card>
 
-      {/* ---------- DISPONIBILIDAD ---------- */}
       <Card sx={{ mb: 4, boxShadow: 3 }}>
         <CardContent>
           <Typography variant="h6">Disponibilidad Médica</Typography>
@@ -224,7 +263,6 @@ export default function AdminDashboard() {
         </CardContent>
       </Card>
 
-      {/* ---------- CITAS ---------- */}
       <Card sx={{ boxShadow: 3 }}>
         <CardContent>
           <Typography variant="h6">Citas Registradas</Typography>

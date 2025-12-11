@@ -18,11 +18,10 @@ import {
 import MenuIcon from '@mui/icons-material/Menu';
 import LogoutIcon from '@mui/icons-material/Logout';
 import DashboardIcon from '@mui/icons-material/Dashboard';
+import EventNoteIcon from '@mui/icons-material/EventNote';
+import DateRangeIcon from '@mui/icons-material/DateRange';
 import { useNavigate } from 'react-router-dom';
-// Asegúrate de que el logo esté accesible si lo quieres usar en el navbar
-// import logo from '../assets/logo.png'; 
 
-// Las props esperan 'children' que será el componente de la página actual (e.g., AdminDashboard)
 export default function MainLayout({ children }) {
     const navigate = useNavigate();
     const [drawerOpen, setDrawerOpen] = useState(false);
@@ -39,17 +38,17 @@ export default function MainLayout({ children }) {
             case 'admin':
                 return [
                     { name: 'Dashboard Admin', path: '/dashboard', icon: <DashboardIcon /> },
-                    // Podrías añadir más aquí (e.g., '/gestion-consultorios')
+                    // RF14: Gestión de Usuarios, RF15: Reportes
                 ];
-            case 'doctor':
+            case 'medico': // Usamos 'medico' para ser consistente con Registration.jsx
                 return [
-                    { name: 'Dashboard Doctor', path: '/dashboard', icon: <DashboardIcon /> },
-                    // Podrías añadir más aquí (e.g., '/mis-pacientes')
+                    { name: 'Mi Panel Médico', path: '/dashboard', icon: <DashboardIcon /> },
+                    { name: 'Disponibilidad (RF04)', path: '#', icon: <DateRangeIcon /> },
                 ];
             case 'paciente':
                 return [
-                    { name: 'Agendar Cita', path: '/citas', icon: <DashboardIcon /> },
-                    { name: 'Mis Citas', path: '/dashboard', icon: <DashboardIcon /> },
+                    { name: 'Mis Citas', path: '/dashboard', icon: <DateRangeIcon /> },
+                    { name: 'Agendar Cita (RF05)', path: '#', icon: <EventNoteIcon /> },
                 ];
             default:
                 return [];
@@ -65,26 +64,34 @@ export default function MainLayout({ children }) {
         navigate('/login');
     };
 
-    // 4. Redirección si no hay token (simulación de protección de ruta)
+    // 4. Redirección si no hay token
     useEffect(() => {
         if (!token) {
             navigate('/login');
         }
     }, [token, navigate]);
 
-    // Si no está autenticado, no renderizamos el layout completo (opcional)
     if (!token) {
         return <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}><CircularProgress /></Box>;
     }
     
     return (
-        <Box sx={{ display: 'flex', minHeight: '100vh', flexDirection: 'column' }}>
+        // El Box principal ahora tiene el fondo degradado de las pantallas de Login/Register
+        <Box 
+            sx={{ 
+                minHeight: '100vh', 
+                flexDirection: 'column', 
+                // FONDO APLICADO AL ENVOLTORIO PRINCIPAL
+                background: 'linear-gradient(135deg, #e0f2fe 0%, #a7f3d0 100%)', 
+                display: 'flex',
+            }}
+        >
             
-            {/* ---------- APP BAR (HEADER) ---------- */}
-            <AppBar position="static" sx={{ bgcolor: '#1e40af' }}>
+            {/* ---------- APP BAR (HEADER) - ESTILOS MEJORADOS ---------- */}
+            <AppBar position="sticky" sx={{ bgcolor: '#1e40af', boxShadow: 3 }}> {/* Color y Sombra consistentes */}
                 <Toolbar>
                     
-                    {/* Botón de Menú para la Sidebar (solo en móviles) */}
+                    {/* Botón de Menú para la Sidebar (Siempre visible para Dashboards) */}
                     <IconButton
                         color="inherit"
                         aria-label="open drawer"
@@ -96,7 +103,7 @@ export default function MainLayout({ children }) {
                     </IconButton>
                     
                     {/* Logo/Título principal */}
-                    <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+                    <Typography variant="h6" component="div" sx={{ flexGrow: 1, fontWeight: 'bold' }}>
                         ZenMediClick - {userRole.charAt(0).toUpperCase() + userRole.slice(1)}
                     </Typography>
                     
@@ -106,13 +113,21 @@ export default function MainLayout({ children }) {
                     </Typography>
 
                     {/* Botón de Logout */}
-                    <Button color="inherit" onClick={handleLogout} startIcon={<LogoutIcon />}>
+                    <Button color="inherit" onClick={handleLogout} startIcon={<LogoutIcon />} sx={{ 
+                        // Botón de salida con estilo más limpio
+                        fontWeight: 'bold', 
+                        border: '1px solid rgba(255, 255, 255, 0.5)',
+                        '&:hover': {
+                            bgcolor: 'rgba(255, 255, 255, 0.1)',
+                            border: '1px solid white'
+                        }
+                    }}>
                         Salir
                     </Button>
                 </Toolbar>
             </AppBar>
 
-            {/* ---------- SIDEBAR (DRAWER) ---------- */}
+            {/* ---------- SIDEBAR (DRAWER) - Mantenido ---------- */}
             <Drawer
                 anchor="left"
                 open={drawerOpen}
@@ -125,33 +140,47 @@ export default function MainLayout({ children }) {
                     onKeyDown={() => setDrawerOpen(false)}
                 >
                     <List>
+                        {/* Título o cabecera del Drawer */}
+                        <Box sx={{ p: 2, bgcolor: '#e0f2fe', borderBottom: '1px solid #bae6fd' }}>
+                            <Typography variant="h6" color="#1e40af">Menú Principal</Typography>
+                        </Box>
+                        
                         {navItems.map((item) => (
                             <ListItem key={item.name} disablePadding>
-                                <ListItemButton onClick={() => navigate(item.path)}>
-                                    <ListItemIcon>
+                                <ListItemButton onClick={() => navigate(item.path === '#' ? '/dashboard' : item.path)}>
+                                    <ListItemIcon sx={{ color: '#561eafff' }}>
                                         {item.icon}
                                     </ListItemIcon>
                                     <ListItemText primary={item.name} />
                                 </ListItemButton>
                             </ListItem>
                         ))}
+                        <ListItem disablePadding sx={{ mt: 2, borderTop: '1px solid #eee' }}>
+                            <ListItemButton onClick={handleLogout}>
+                                <ListItemIcon>
+                                    <LogoutIcon color="error" />
+                                </ListItemIcon>
+                                <ListItemText primary="Cerrar Sesión" primaryTypographyProps={{ color: 'error' }} />
+                            </ListItemButton>
+                        </ListItem>
                     </List>
                 </Box>
             </Drawer>
             
-            {/* ---------- CONTENIDO PRINCIPAL (Donde se renderizan los Dashboards) ---------- */}
+            {/* ---------- CONTENIDO PRINCIPAL ---------- */}
             <Container 
                 maxWidth="xl" 
                 component="main" 
-                sx={{ flexGrow: 1, p: 3, pt: 4, bgcolor: '#f1f5f9' }} // Fondo claro para el área de contenido
+                // QUITAMOS EL FONDO BLANCO AQUÍ, permitiendo que se vea el degradado del Box principal.
+                sx={{ flexGrow: 1, p: 3, pt: 4, py: { xs: 4, sm: 6 } }} 
             >
-                {/* Aquí es donde se inserta el componente hijo (e.g., AdminDashboard) */}
+                {/* Aquí es donde se inserta el componente hijo (e.g., PatientDashboard) */}
                 {children}
             </Container>
 
-            {/* Opcional: Footer simple */}
-            <Box sx={{ py: 1, bgcolor: '#e0f2fe', textAlign: 'center', borderTop: '1px solid #bae6fd' }}>
-                <Typography variant="caption" color="textSecondary">© 2025 ZenMediClick</Typography>
+            {/* Opcional: Footer simple - con estilo acorde */}
+            <Box sx={{ py: 1, bgcolor: '#a7f3d0', textAlign: 'center', borderTop: '1px solid #bae6fd' }}>
+                <Typography variant="caption" color="#065f46" fontWeight="bold">© 2025 ZenMediClick</Typography>
             </Box>
         </Box>
     );

@@ -27,7 +27,7 @@ class RegisterSchema(BaseModel):
     email: str
     cedula: str
     password: str
-    rol: str
+    rol: str= "paciente"
 
 class LoginSchema(BaseModel):
     email: str
@@ -49,16 +49,21 @@ def create_access_token(data: dict):
 # -------------------------------
 @router.post("/register")
 def register(body: RegisterSchema, db: Session = Depends(get_db)):
+    # Normalizar el rol para la validación (¡CORRECCIÓN CLAVE!)
+    normalized_rol = body.rol.lower() 
+
     # VALIDAR ROL PERMITIDO
-    if body.rol not in ["Paciente", "Medico"]:
+    # Validamos contra la versión en minúsculas.
+    if normalized_rol not in ["paciente", "medico"]: 
+        # Si tienes más roles, inclúyelos aquí en minúsculas
         raise HTTPException(status_code=400, detail="Rol no permitido para registro")
 
-    # VALIDAR EMAIL
+    # VALIDAR EMAIL (El resto del código es correcto)
     exists_email = db.query(Usuario).filter(Usuario.email == body.email).first()
     if exists_email:
         raise HTTPException(status_code=400, detail="El email ya está registrado")
 
-    # VALIDAR CÉDULA
+    # VALIDAR CÉDULA (El resto del código es correcto)
     exists_cedula = db.query(Usuario).filter(Usuario.cedula == body.cedula).first()
     if exists_cedula:
         raise HTTPException(status_code=400, detail="La cédula ya está registrada")
@@ -69,7 +74,8 @@ def register(body: RegisterSchema, db: Session = Depends(get_db)):
         email=body.email,
         cedula=body.cedula,
         password=hash_password(body.password),
-        rol=body.rol
+        # Guardamos el rol normalizado en la base de datos (¡CORRECCIÓN CLAVE!)
+        rol=normalized_rol 
     )
 
     db.add(user)
@@ -81,7 +87,6 @@ def register(body: RegisterSchema, db: Session = Depends(get_db)):
         "msg": "Usuario creado correctamente",
         "user": {"id": user.id, "nombre": user.nombre}
     }
-
 
 @router.post("/login")
 def login(body: LoginSchema, db: Session = Depends(get_db)):

@@ -10,25 +10,38 @@ import {
     FormControlLabel, 
     Checkbox,
     Link,
-    IconButton 
+    IconButton,
+    // --- NUEVAS IMPORTACIONES PARA EL SELECT ---
+    FormControl, 
+    InputLabel, 
+    Select, 
+    MenuItem
+    // --- FIN NUEVAS IMPORTACIONES ---
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import InputAdornment from '@mui/material/InputAdornment'; 
-import logo from '../assets/logo.png'; // Asegúrate de que esta ruta sea correcta
+// Asumiendo que esta ruta es correcta en tu proyecto
+import logo from '../assets/logo.png'; 
 
-// CÓDIGO CORREGIDO (DEBE SER ASÍ)
+// --- CONFIGURACIÓN DE SIMULACIÓN ---
+const SIMULATE_SUCCESS = true; 
 const API_REGISTER = "http://localhost:8000/auth/register";
 
+// Usaremos 'medico' en lugar de 'doctor' para el rol para que coincida con el Select
+// También añadimos especialidad, aunque el Select no lo pide en el diseño actual, 
+// la simulación lo guardará si se añade el campo después.
+// Por ahora, solo usamos los campos presentes en el formulario.
 export default function Registration() {
     const [form, setForm] = useState({ 
         nombre: '', 
         cedula: '', 
         email: '', 
         password: '', 
-        rol: 'paciente', 
-        autorizacion: false // Estado inicial del checkbox
+        rol: 'paciente', // Valor por defecto
+        autorizacion: false,
+        especialidad: '' // Añadido para futura expansión del rol 'medico'
     });
     const [errorMsg, setErrorMsg] = useState('');
     const [successMsg, setSuccessMsg] = useState('');
@@ -38,12 +51,18 @@ export default function Registration() {
     const navigate = useNavigate();
 
     const handleInputChange = (e) => {
-        setForm({ ...form, [e.target.name]: e.target.value });
+        const { name, value } = e.target;
+        setForm({ ...form, [name]: value });
     };
 
     const validateForm = () => {
+        // Se mantiene la validación de campos obligatorios, email, password y autorización
         if (!form.nombre || !form.cedula || !form.email || !form.password) {
             setErrorMsg('Todos los campos son obligatorios.');
+            return false;
+        }
+        if (!/^\d+$/.test(form.cedula)) {
+            setErrorMsg('La cédula solo debe contener números.');
             return false;
         }
         if (!/\S+@\S+\.\S+/.test(form.email)) {
@@ -54,7 +73,6 @@ export default function Registration() {
             setErrorMsg('La contraseña debe tener al menos 6 caracteres.');
             return false;
         }
-        // VALIDACIÓN DEL CHECKBOX
         if (!form.autorizacion) {
             setErrorMsg('Debes autorizar el tratamiento de datos para continuar.');
             return false;
@@ -73,13 +91,61 @@ export default function Registration() {
         setErrorMsg('');
         setSuccessMsg('');
 
+        // --- LÓGICA DE SIMULACIÓN (Usando localStorage y RF01) ---
+        if (SIMULATE_SUCCESS) {
+            
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            
+            const storedUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
+
+            // Objeto de nuevo usuario con campos para la simulación
+            const newUser = {
+                id: Date.now().toString(), // Usamos string para el ID
+                nombre: form.nombre,
+                cedula: form.cedula,
+                email: form.email,
+                password: form.password, 
+                rol: form.rol, 
+                especialidad: form.rol === 'medico' ? form.especialidad : undefined,
+            };
+            
+            // Simular Validaciones de Único (RF01)
+            const emailExists = storedUsers.some(user => user.email === newUser.email);
+            const cedulaExists = storedUsers.some(user => user.cedula === newUser.cedula);
+
+            if (emailExists) {
+                setErrorMsg(`El email ya está registrado.`);
+                setIsLoading(false);
+                return;
+            }
+
+            if (cedulaExists) {
+                setErrorMsg(`La cédula ya está registrada.`);
+                setIsLoading(false);
+                return;
+            }
+
+            // Guardar usuario
+            storedUsers.push(newUser);
+            localStorage.setItem('registeredUsers', JSON.stringify(storedUsers));
+            
+            setSuccessMsg(`✅ Registro de ${form.rol} exitoso (SIMULADO). Serás redirigido a Iniciar Sesión.`);
+            setIsLoading(false);
+            
+            // Redirigir
+            setTimeout(() => navigate('/login'), 2000); 
+            return; 
+        }
+        // --- FIN DE LA LÓGICA DE SIMULACIÓN ---
+
+        // --- CÓDIGO DEL BACKEND REAL (Mantenido) ---
         try {
-            // Aseguramos que solo enviamos los 4 campos esperados por FastAPI
             const dataToSend = { 
                 nombre: form.nombre, 
                 cedula: form.cedula,
                 email: form.email, 
-                password: form.password 
+                password: form.password,
+                rol: form.rol
             }; 
             
             const res = await fetch(API_REGISTER, {
@@ -88,30 +154,16 @@ export default function Registration() {
                 body: JSON.stringify(dataToSend)
             });
             
-            const data = await res.json();
-
-            if (res.ok) { 
-                setSuccessMsg('Registro exitoso. Serás redirigido a Iniciar Sesión.');
-                setTimeout(() => navigate('/login'), 2000); 
+            if (res.ok) {
+                 const data = await res.json();
+                 setSuccessMsg('Registro exitoso. Inicia sesión.');
+                 setTimeout(() => navigate('/login'), 2000); 
             } else {
-                // CORRECCIÓN CLAVE: Manejo del objeto 'detail' de FastAPI
-                let message = data.error || data.message || 'Error al registrarse. Intenta de nuevo.';
-                
-                if (data.detail) {
-                    if (Array.isArray(data.detail)) {
-                        // Formatear errores de validación (422)
-                        message = data.detail.map(err => `${err.loc.join('.')}: ${err.msg}`).join('; ');
-                    } else if (typeof data.detail === 'string') {
-                        // Usar el string de error del backend (ej. "El correo ya está registrado")
-                        message = data.detail;
-                    }
-                }
-                
-                setErrorMsg(message);
+                 const errorData = await res.json();
+                 setErrorMsg(errorData.message || 'Error en el registro.');
             }
         } catch (error) {
-            console.error("Error de conexión:", error);
-            setErrorMsg('Error de conexión con el servidor. Por favor, verifica tu red.');
+            setErrorMsg('Error de conexión con el servidor.');
         } finally {
             setIsLoading(false);
         }
@@ -147,6 +199,45 @@ export default function Registration() {
 
                         <TextField fullWidth required label="Nombre Completo" name="nombre" value={form.nombre} onChange={handleInputChange} sx={{ mb: 2 }} />
                         <TextField fullWidth required label="Cédula" name="cedula" value={form.cedula} onChange={handleInputChange} sx={{ mb: 2 }} inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }} />
+                        
+                        {/* --- SELECTOR DE ROL AÑADIDO (Conservado) --- */}
+                        <FormControl fullWidth sx={{ mb: 2 }}>
+                            <InputLabel id="rol-label">Rol</InputLabel>
+                            <Select
+                                labelId="rol-label"
+                                id="rol"
+                                name="rol"
+                                value={form.rol}
+                                label="Rol"
+                                onChange={handleInputChange}
+                            >
+                                <MenuItem value="paciente">Paciente</MenuItem>
+                                <MenuItem value="medico">Médico</MenuItem>
+                            </Select>
+                        </FormControl>
+                        {/* --- FIN SELECTOR DE ROL --- */}
+
+                        {/* Campo de Especialidad (Si el rol es médico) */}
+                        {form.rol === 'medico' && (
+                            <FormControl fullWidth sx={{ mb: 2 }}>
+                                <InputLabel id="especialidad-label">Especialidad</InputLabel>
+                                <Select
+                                    labelId="especialidad-label"
+                                    name="especialidad"
+                                    value={form.especialidad}
+                                    label="Especialidad"
+                                    onChange={handleInputChange}
+                                >
+                                    {/* Opciones de especialidad simuladas */}
+                                    <MenuItem value="Medicina General">Medicina General</MenuItem>
+                                    <MenuItem value="Pediatria">Pediatría</MenuItem>
+                                    <MenuItem value="Cardiologia">Cardiología</MenuItem>
+                                    <MenuItem value="Ginecologia">Ginecología</MenuItem>
+                                </Select>
+                            </FormControl>
+                        )}
+
+
                         <TextField fullWidth required label="Email" name="email" type="email" value={form.email} onChange={handleInputChange} sx={{ mb: 2 }} />
                         
                         <TextField 

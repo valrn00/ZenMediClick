@@ -1,362 +1,487 @@
-import { useState, useEffect } from 'react';
-import { 
-    Container, 
-    Grid, 
-    Card, 
-    CardContent, 
-    Typography, 
-    Button, 
-    Table, 
-    TableBody, 
-    TableCell, 
-    TableHead, 
-    TableRow, 
-    Dialog, 
-    DialogTitle, 
-    DialogContent, 
-    DialogActions, 
+import { useState, useEffect, useMemo } from 'react';
+import {
+    Container,
+    Typography,
+    Card,
+    CardContent,
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableRow,
+    Button,
     TextField,
-    // Nuevos imports para selección de doctor
+    Grid,
+    CircularProgress,
+    Alert,
+    Box, 
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
     FormControl,
     InputLabel,
     Select,
-    MenuItem,
-    Alert,
-    CircularProgress 
+    MenuItem
 } from '@mui/material';
-import jsPDF from 'jspdf';
-import DownloadIcon from '@mui/icons-material/Download';
-import CloseIcon from '@mui/icons-material/Close';
+
+import FileDownloadIcon from '@mui/icons-material/FileDownload'; 
+
+// --- IMPORTACIONES PARA EL CALENDARIO ---
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css"; 
+// Importar utilidades de localización (Necesitas instalar 'date-fns')
+import { es } from 'date-fns/locale'; 
+import { parseISO } from 'date-fns'; // Para convertir strings ISO a Date objects
+
+// --- FUNCIÓN AUXILIAR DE FORMATO ---
+const formatDate = (date) => {
+    if (!date) return '';
+    // Formatea un objeto Date a la cadena YYYY-MM-DD
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
+// --- CONFIGURACIÓN DE ESTILOS INLINE PARA REACT-DATEPICKER ---
+// Este estilo es crucial para que el input del DatePicker se vea bien con MUI
+const datePickerInputStyle = {
+    padding: '16.5px 14px',
+    border: '1px solid #ccc',
+    borderRadius: '4px',
+    width: '100%',
+    boxSizing: 'border-box',
+    cursor: 'pointer',
+};
 
 
-const API = "https://zenmediclick.onrender.com";
+// --- CONFIGURACIÓN DE SIMULACIÓN ---
+const SIMULATE_PATIENT_DASHBOARD = true;
 
 export default function PatientDashboard() {
+    // ----------------------------------------
+    //      ESTADO DEL COMPONENTE
+    // ----------------------------------------
     const [citas, setCitas] = useState([]);
-    const [doctores, setDoctores] = useState([]); // Nuevo estado para la lista de doctores
-    const [disponibilidadDoctor, setDisponibilidadDoctor] = useState([]); // Nuevo estado para disponibilidad
+    const [loadingCitas, setLoadingCitas] = useState(true);
+    const [errorMsg, setErrorMsg] = useState(null);
+    const [loadingAction, setLoadingAction] = useState(false);
+    const [openDialog, setOpenDialog] = useState(false);
+    const [doctors, setDoctors] = useState([]);
+    const [disponibilidad, setDisponibilidad] = useState([]);
     
-    const [open, setOpen] = useState(false);
-    const [isLoading, setIsLoading] = useState(false);
-    const [nueva, setNueva] = useState({ 
-        fecha: '', 
-        hora: '', 
-        motivo: '', 
-        id_medico: '' // Nuevo: ID del médico seleccionado
+    // Usamos el objeto Date nativo para el DatePicker, inicializado en null.
+    const [fechaSeleccionada, setFechaSeleccionada] = useState(null); 
+    
+    const [nuevaCita, setNuevaCita] = useState({
+        id_medico: '',
+        fecha: '', // Esta será una cadena 'YYYY-MM-DD'
+        hora: '',
+        motivo: '',
+        consultorio: 'Consultorio A' 
     });
 
-    const token = localStorage.getItem("token");
-    const user = JSON.parse(localStorage.getItem("user"));
-    const pacienteId = user?.id;
-    
-    // ------------------------------------
-    // 1. CARGA INICIAL DE CITAS Y DOCTORES
-    // ------------------------------------
+    // ----------------------------------------
+    //      DATOS DEL USUARIO
+    // ----------------------------------------
+    const currentUserJson = localStorage.getItem("currentUser");
+    const user = currentUserJson ? JSON.parse(currentUserJson) : {};
+    const patientId = user?.id;
+
+    const allUsers = useMemo(() => {
+        const usersJson = localStorage.getItem('registeredUsers');
+        return usersJson ? JSON.parse(usersJson) : [];
+    }, []);
+
+    const getDoctorName = (doctorId) => {
+        const doctor = allUsers.find(u => u.id === doctorId && u.rol === 'medico');
+        return doctor ? `${doctor.nombre} (${doctor.especialidad || 'General'})` : 'Médico Desconocido';
+    };
+
+    // ----------------------------------------
+    //      Carga de Datos Inicial (RF05, RF07)
+    // ----------------------------------------
     useEffect(() => {
-        if (pacienteId && token) {
-            cargarCitas();
-            cargarDoctores();
+        if (SIMULATE_PATIENT_DASHBOARD && patientId) {
+            simulateLoadData();
         }
-    }, [pacienteId, token]);
+    }, [patientId]);
 
-    const cargarCitas = async () => {
-        try {
-            const r = await fetch(`${API}/citas/mias/${pacienteId}`, {
-                headers: { Authorization: token }
+    const simulateLoadData = () => {
+        setLoadingCitas(true);
+        setErrorMsg(null);
+        
+        const availableDoctors = allUsers.filter(u => u.rol === 'medico');
+        setDoctors(availableDoctors);
+
+        const allAppointments = JSON.parse(localStorage.getItem('simulatedAppointments') || '[]');
+        const patientAppointments = allAppointments
+            .filter(c => c.id_paciente === patientId)
+            .map(c => ({
+                ...c,
+                medico: getDoctorName(c.id_medico)
+            }))
+            .sort((a, b) => {
+                if (a.fecha !== b.fecha) return new Date(a.fecha) - new Date(b.fecha);
+                return a.hora.localeCompare(b.hora);
             });
-            setCitas(await r.json());
-        } catch (error) {
-            console.error("Error cargando citas:", error);
+        
+        setCitas(patientAppointments);
+        setLoadingCitas(false);
+    };
+
+    // ----------------------------------------
+    //      Lógica de Agendamiento (RF05, RF06)
+    // ----------------------------------------
+
+    // Maneja el cambio de fecha del DatePicker (Recibe un objeto Date)
+    const handleDateChange = (date) => {
+        setFechaSeleccionada(date);
+        
+        // Convertir objeto Date a formato 'YYYY-MM-DD' para la simulación
+        const formattedDate = date ? formatDate(date) : ''; 
+        
+        setNuevaCita(prev => ({ 
+            ...prev, 
+            fecha: formattedDate,
+            hora: '' // Resetear hora al cambiar fecha (RF06)
+        }));
+    };
+
+
+    // Carga la disponibilidad del médico seleccionado
+    const cargarDisponibilidadPorDoctorSimulada = (doctorId) => {
+        const allAvailability = JSON.parse(localStorage.getItem('simulatedAvailability') || '[]');
+        const doctorAvailability = allAvailability.filter(d => d.doctor_id === doctorId);
+        setDisponibilidad(doctorAvailability);
+        setFechaSeleccionada(null); // Resetear selección de fecha/hora
+        setNuevaCita(prev => ({ ...prev, fecha: '', hora: '' })); 
+    };
+
+    const handleDoctorChange = (e) => {
+        const doctorId = e.target.value;
+        setNuevaCita(prev => ({ ...prev, id_medico: doctorId }));
+        if (doctorId) {
+            cargarDisponibilidadPorDoctorSimulada(doctorId);
+        } else {
+            setDisponibilidad([]);
         }
     };
-    
-    const cargarDoctores = async () => {
-        try {
-            // Asumiendo un endpoint para obtener la lista de doctores (rol=doctor)
-            const r = await fetch(`${API}/usuarios/doctores`, {
-                headers: { Authorization: token }
-            });
-            setDoctores(await r.json());
-        } catch (error) {
-            console.error("Error cargando doctores:", error);
-        }
-    };
 
-    // ------------------------------------
-    // 2. LÓGICA DE DISPONIBILIDAD
-    // ------------------------------------
-    const cargarDisponibilidad = async (doctorId) => {
-        if (!doctorId) {
-            setDisponibilidadDoctor([]);
+    const simulateAppointment = async () => {
+        if (!nuevaCita.id_medico || !nuevaCita.fecha || !nuevaCita.hora || !nuevaCita.motivo) {
+            setErrorMsg("Por favor, complete todos los campos de la cita.");
             return;
         }
-        try {
-            // Asumiendo un endpoint para obtener la disponibilidad por doctor
-            const r = await fetch(`${API}/disponibilidad/medico/${doctorId}`, {
-                headers: { Authorization: token }
-            });
-            setDisponibilidadDoctor(await r.json());
-        } catch (error) {
-            console.error("Error cargando disponibilidad:", error);
-            setDisponibilidadDoctor([]);
-        }
-    };
-    
-    const handleDoctorChange = (e) => {
-        const id_medico = e.target.value;
-        setNueva({ ...nueva, id_medico: id_medico, fecha: '', hora: '' }); // Resetear fecha/hora
-        cargarDisponibilidad(id_medico);
-    };
 
-    // ------------------------------------
-    // 3. ACCIÓN DE AGENDAR
-    // ------------------------------------
-    const agendar = async () => {
-        if (!nueva.id_medico || !nueva.fecha || !nueva.hora || !nueva.motivo) {
-            alert("Por favor, selecciona un doctor, fecha, hora y motivo.");
+        setLoadingAction(true);
+        setErrorMsg(null);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        const allAppointments = JSON.parse(localStorage.getItem('simulatedAppointments') || '[]');
+        
+        // Simulación de validación de cita duplicada del paciente
+        const patientAppointmentExists = allAppointments.some(c => 
+            c.id_paciente === patientId && 
+            c.fecha === nuevaCita.fecha && 
+            c.hora === nuevaCita.hora &&
+            c.estado !== 'cancelada'
+        );
+
+        if (patientAppointmentExists) {
+            setErrorMsg("Ya tienes una cita agendada para esa fecha y hora.");
+            setLoadingAction(false);
             return;
         }
         
-        setIsLoading(true);
+        // Crear nueva cita
+        const newAppointment = {
+            id: Date.now().toString(),
+            id_paciente: patientId,
+            estado: 'pendiente', // RF05: estado inicial
+            ...nuevaCita,
+        };
 
-        try {
-            const res = await fetch(`${API}/citas`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: token
-                },
-                body: JSON.stringify({
-                    ...nueva,
-                    id_paciente: pacienteId,
-                })
-            });
-            
-            if (res.ok) {
-                alert("Cita agendada exitosamente.");
-                setOpen(false);
-                cargarCitas(); // Recargar citas en lugar de recargar la página completa
-                setNueva({ fecha: '', hora: '', motivo: '', id_medico: '' }); // Resetear formulario
-            } else {
-                const errorData = await res.json();
-                alert(`Error al agendar: ${errorData.message || res.statusText}`);
+        allAppointments.push(newAppointment);
+        localStorage.setItem('simulatedAppointments', JSON.stringify(allAppointments));
+
+        alert("✅ Cita agendada exitosamente (RF05).");
+        setOpenDialog(false);
+        setLoadingAction(false);
+        simulateLoadData(); // Recargar citas
+        setNuevaCita({ id_medico: '', fecha: '', hora: '', motivo: '', consultorio: 'Consultorio A' });
+        setFechaSeleccionada(null);
+        setDisponibilidad([]);
+    };
+
+    // ----------------------------------------
+    //      Lógica de Cancelación (RF07)
+    // ----------------------------------------
+    const cancelAppointment = async (citaId) => {
+        if (!window.confirm("¿Está seguro que desea cancelar esta cita?")) return;
+
+        setLoadingAction(true);
+        setErrorMsg(null);
+        await new Promise(resolve => setTimeout(resolve, 500)); 
+
+        const allAppointments = JSON.parse(localStorage.getItem('simulatedAppointments') || '[]');
+        
+        const updatedAppointments = allAppointments.map(c => {
+            if (c.id === citaId) {
+                return { ...c, estado: 'cancelada' }; // RF07
             }
+            return c;
+        });
 
-        } catch (error) {
-            console.error("Error al agendar cita:", error);
-            alert("Error de conexión al agendar cita.");
-        } finally {
-            setIsLoading(false);
-        }
+        localStorage.setItem('simulatedAppointments', JSON.stringify(updatedAppointments));
+        alert("❌ Cita cancelada exitosamente (RF07).");
+        setLoadingAction(false);
+        simulateLoadData(); // Recargar citas
     };
 
-    // ------------------------------------
-    // 4. ACCIÓN DE CANCELAR
-    // ------------------------------------
-    const cancelar = async (id) => {
-        if (!window.confirm("¿Estás seguro de que quieres cancelar esta cita?")) return;
-
-        try {
-            const res = await fetch(`${API}/citas/cancelar/${id}`, {
-                method: "POST",
-                headers: { Authorization: token }
-            });
-
-            if (res.ok) {
-                alert("Cita cancelada correctamente.");
-                setCitas(citas.filter((c) => c.id !== id));
-            } else {
-                alert("No se pudo cancelar la cita. Inténtalo de nuevo.");
-            }
-        } catch (error) {
-            console.error("Error al cancelar:", error);
-            alert("Error de conexión al cancelar la cita.");
-        }
+    // ----------------------------------------
+    //      Simulación de Descarga de PDF (RF12)
+    // ----------------------------------------
+    const handleDownloadPDF = (cita) => {
+        alert(`Simulando descarga del reporte médico para la cita del ${cita.fecha} con ${cita.medico}.`);
+        window.open('https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', '_blank');
     };
 
-    // ------------------------------------
-    // 5. GENERAR PDF (sin cambios significativos)
-    // ------------------------------------
-    const generarPDF = (cita) => {
-        const doc = new jsPDF();
-        doc.text("Constancia de Cita ZenMediClick", 20, 20);
-        doc.text("-----------------------------------", 20, 25);
-        doc.text(`Paciente: ${user.nombre}`, 20, 35);
-        // Nota: Si el backend incluye el nombre del doctor, se debe añadir aquí.
-        doc.text(`Fecha: ${cita.fecha}`, 20, 45);
-        doc.text(`Hora: ${cita.hora}`, 20, 55);
-        doc.text(`Motivo: ${cita.motivo}`, 20, 65);
-        doc.save(`constancia_cita_${cita.id}.pdf`);
-    };
+    if (!patientId) {
+        return <Alert severity="error">Acceso denegado. No se encontró información del Paciente.</Alert>;
+    }
+
+    // Obtener las fechas únicas disponibles para el médico seleccionado, convertidas a objetos Date
+    const availableDates = useMemo(() => {
+        // Mapear los strings 'YYYY-MM-DD' a objetos Date válidos para react-datepicker
+        return disponibilidad
+            .map(d => d.fecha) // Obtener solo las fechas en formato string
+            .filter((value, index, self) => self.indexOf(value) === index) // Obtener fechas únicas
+            .map(dateString => parseISO(dateString)); // Convertir string a Date object
+    }, [disponibilidad]);
+
 
     return (
-        <Container maxWidth="xl" sx={{ py: 4 }}>
-            <Typography variant="h4" sx={{ mb: 4, color: '#1e40af' }}>👋 Hola, {user?.nombre || 'Paciente'}</Typography>
-            
-            <Grid container spacing={3}>
-                {/* Botón de Nueva Cita */}
-                <Grid item xs={12} md={4}>
-                    <Card sx={{ boxShadow: 3 }}>
-                        <CardContent>
-                            <Button fullWidth variant="contained" size="large" onClick={() => setOpen(true)} sx={{ py: 2 }}>
-                                ➕ Agendar Nueva Cita
-                            </Button>
-                        </CardContent>
-                    </Card>
-                </Grid>
-                
-                {/* Cuadro de Resumen (Opcional, se puede expandir) */}
-                <Grid item xs={12} md={8}>
-                     <Card sx={{ boxShadow: 3 }}>
-                        <CardContent>
-                            <Typography variant="h6">Resumen</Typography>
-                            <Typography variant="body1">Tienes **{citas.length}** citas registradas en tu historial.</Typography>
-                        </CardContent>
-                    </Card>
-                </Grid>
+        <Container maxWidth="md" sx={{ mt: 0, mb: 0 }}>
+            <Card sx={{ boxShadow: 8, p: 4, bgcolor: 'white' }}>
+                <CardContent>
+                    <Typography variant="h4" sx={{ mb: 4, color: '#1e40af', fontWeight: 'bold', textAlign: 'center' }}>
+                        🏥 Dashboard del Paciente: {user.nombre}
+                    </Typography>
 
-                {/* Tabla de Citas */}
-                <Grid item xs={12}>
-                    <Card sx={{ boxShadow: 3 }}>
-                        <CardContent>
-                            <Typography variant="h5" sx={{ mb: 2 }}>Citas Agendadas</Typography>
-                            <Table>
-                                <TableHead>
-                                    <TableRow>
-                                        <TableCell>Fecha</TableCell>
-                                        <TableCell>Hora</TableCell>
-                                        <TableCell>Doctor</TableCell> 
-                                        <TableCell>Estado</TableCell>
-                                        <TableCell>Acciones</TableCell>
-                                    </TableRow>
-                                </TableHead>
-                                <TableBody>
-                                    {citas.length > 0 ? (
-                                        citas.map((c) => (
-                                            <TableRow key={c.id}>
-                                                <TableCell>{c.fecha}</TableCell>
-                                                <TableCell>{c.hora}</TableCell>
-                                                {/* Asumiendo que el backend ahora provee c.doctor_nombre */}
-                                                <TableCell>{c.doctor_nombre || "Doctor ID: " + c.doctor_id}</TableCell> 
-                                                <TableCell>{c.estado}</TableCell>
-                                                <TableCell>
-                                                    {c.estado === 'pendiente' ? (
-                                                        <Button 
-                                                            size="small" 
-                                                            color="error" 
-                                                            onClick={() => cancelar(c.id)} 
-                                                            startIcon={<CloseIcon />}
-                                                            sx={{ mr: 1 }}
-                                                        >
-                                                            Cancelar
-                                                        </Button>
-                                                    ) : (
-                                                        <Button size="small" disabled>
-                                                            {c.estado.charAt(0).toUpperCase() + c.estado.slice(1)}
-                                                        </Button>
-                                                    )}
-                                                    
-                                                    <Button size="small" onClick={() => generarPDF(c)} startIcon={<DownloadIcon />}>
-                                                        PDF
+                    {/* ---------- ACCIÓN PRINCIPAL ---------- */}
+                    <Box sx={{ mb: 4, textAlign: 'center' }}>
+                        <Button 
+                            variant="contained" 
+                            size="large"
+                            onClick={() => setOpenDialog(true)}
+                            sx={{ bgcolor: '#3b82f6', '&:hover': { bgcolor: '#2563eb' } }}
+                        >
+                            Agendar Nueva Cita
+                        </Button>
+                    </Box>
+
+                    {/* ---------- MIS CITAS (RF05, RF07, RF12) ---------- */}
+                    <Typography variant="h5" sx={{ mt: 3, mb: 2, color: '#065f46' }}>📋 Mis Citas Programadas</Typography>
+                    
+                    {loadingCitas && <Grid container justifyContent="center" sx={{ p: 3 }}><CircularProgress /></Grid>}
+                    {errorMsg && <Alert severity="error" sx={{ mb: 2 }}>{errorMsg}</Alert>}
+
+                    {!loadingCitas && (
+                        <Table size="small">
+                            <TableHead>
+                                <TableRow sx={{ bgcolor: '#eff6ff' }}>
+                                    <TableCell>Médico</TableCell>
+                                    <TableCell>Fecha</TableCell>
+                                    <TableCell>Hora</TableCell>
+                                    <TableCell>Motivo</TableCell>
+                                    <TableCell>Estado</TableCell>
+                                    <TableCell>Acción</TableCell>
+                                </TableRow>
+                            </TableHead>
+                            <TableBody>
+                                {citas.length > 0 ? (
+                                    citas.map((c) => (
+                                        <TableRow key={c.id}>
+                                            <TableCell>**{c.medico}**</TableCell>
+                                            <TableCell>{c.fecha}</TableCell>
+                                            <TableCell>{c.hora}</TableCell>
+                                            <TableCell>{c.motivo}</TableCell>
+                                            
+                                            {/* Celda de Estado (Mejorada para ver todos los estados) */}
+                                            <TableCell>
+                                                <Box 
+                                                    sx={{ 
+                                                        p: 0.5, 
+                                                        borderRadius: '4px',
+                                                        fontWeight: 'bold',
+                                                        display: 'inline-block',
+                                                        bgcolor: c.estado === 'pendiente' ? '#ffedd5' : 
+                                                                 c.estado === 'cancelada' ? '#fee2e2' : 
+                                                                 c.estado === 'finalizada' ? '#d1fae5' : 
+                                                                 c.estado === 'en atencion' ? '#fef3c7' : '#f3f4f6', 
+                                                                 
+                                                        color: c.estado === 'pendiente' ? '#9a3412' : 
+                                                               c.estado === 'cancelada' ? '#991b1b' : 
+                                                               c.estado === 'finalizada' ? '#065f46' : 
+                                                               c.estado === 'en atencion' ? '#a16207' : '#4b5563', 
+                                                    }}
+                                                >
+                                                    {c.estado.charAt(0).toUpperCase() + c.estado.slice(1)}
+                                                </Box>
+                                            </TableCell>
+
+                                            {/* Celda de Acción (Corregida) */}
+                                            <TableCell>
+                                                {c.estado === 'pendiente' && (
+                                                    <Button 
+                                                        size="small" 
+                                                        color="error"
+                                                        onClick={() => cancelAppointment(c.id)}
+                                                        disabled={loadingAction}
+                                                    >
+                                                        Cancelar (RF07)
                                                     </Button>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))
-                                    ) : (
-                                        <TableRow><TableCell colSpan={5} align="center">No tienes citas agendadas.</TableCell></TableRow>
+                                                )}
+                                                
+                                                {c.estado === 'finalizada' && (
+                                                    <Button 
+                                                        size="small" 
+                                                        variant="contained" 
+                                                        color="success"
+                                                        startIcon={<FileDownloadIcon />}
+                                                        onClick={() => handleDownloadPDF(c)}
+                                                        sx={{ bgcolor: '#065f46', '&:hover': { bgcolor: '#044c33' } }}
+                                                    >
+                                                        Reporte (RF12)
+                                                    </Button>
+                                                )}
+                                                
+                                                {(c.estado === 'en atencion') && (
+                                                    <Typography variant="body2" color="warning.main">
+                                                        En Atención
+                                                    </Typography>
+                                                )}
+                                                
+                                                {(c.estado === 'cancelada') && (
+                                                    <Typography variant="body2" color="text.secondary">
+                                                        No aplica
+                                                    </Typography>
+                                                )}
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                ) : (
+                                    <TableRow><TableCell colSpan={6} align="center">No tienes citas agendadas.</TableCell></TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
+                    )}
+                </CardContent>
+            </Card>
+
+            {/* ---------- DIALOGO DE AGENDAR CITA (RF05, RF06) ---------- */}
+                <Dialog open={openDialog} onClose={() => setOpenDialog(false)} fullWidth maxWidth="sm">
+                    <DialogTitle sx={{ bgcolor: '#1e40af', color: 'white' }}>Agendar Nueva Cita (RF05)</DialogTitle>
+                    <DialogContent sx={{ pt: 2 }}>
+                        {errorMsg && <Alert severity="error" sx={{ mb: 2 }}>{errorMsg}</Alert>}
+                        
+                        {/* Seleccionar Médico */}
+                        <FormControl fullWidth sx={{ mb: 2 }}>
+                            <InputLabel>Seleccionar Médico</InputLabel>
+                            <Select
+                                value={nuevaCita.id_medico}
+                                label="Seleccionar Médico"
+                                onChange={handleDoctorChange}
+                            >
+                                <MenuItem value="">
+                                    <em>Seleccione un médico</em>
+                                </MenuItem>
+                                {doctors.map((doc) => (
+                                    <MenuItem key={doc.id} value={doc.id}>
+                                        {doc.nombre} ({doc.especialidad})
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+
+                        {nuevaCita.id_medico && (
+                            <Grid container spacing={2}>
+                                {/* Seleccionar Fecha (USANDO REACT-DATEPICKER) */}
+                                <Grid item xs={12} sm={6} sx={{ mb: 2 }}>
+                                    {/* Campo de fecha */}
+                                    <InputLabel htmlFor="react-datepicker-input" sx={{ mb: 1, ml: 1, fontSize: '0.8rem', color: 'rgba(0, 0, 0, 0.6)' }}>
+                                        Seleccionar una fecha
+                                    </InputLabel>
+                                    <DatePicker
+                                        id="react-datepicker-input"
+                                        selected={fechaSeleccionada}
+                                        onChange={handleDateChange}
+                                        dateFormat="dd/MM/yyyy"
+                                        minDate={new Date()}
+                                        placeholderText="Haga clic para seleccionar"
+                                        locale={es} // Usar localización en español
+                                        // IMPORTANTE: usamos 'includeDates' para restringir la selección
+                                        includeDates={availableDates} 
+                                        customInput={<input style={datePickerInputStyle} />} // Aplicar estilo
+                                    />
+                                    {availableDates.length === 0 && (
+                                        <Typography variant="caption" color="error">
+                                            {nuevaCita.id_medico && disponibilidad.length === 0 
+                                                ? "Cargando disponibilidad o el médico no tiene franjas disponibles." 
+                                                : "Seleccione un médico primero."}
+                                        </Typography>
                                     )}
-                                </TableBody>
-                            </Table>
-                        </CardContent>
-                    </Card>
-                </Grid>
-            </Grid>
+                                </Grid>
 
-            {/* ---------- DIALOGO DE AGENDAR CITA (MODIFICADO) ---------- */}
-            <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="sm">
-                <DialogTitle>Agendar Nueva Cita</DialogTitle>
-                <DialogContent>
-                    
-                    {/* 1. SELECCIÓN DE DOCTOR */}
-                    <FormControl fullWidth sx={{ mb: 2 }}>
-                        <InputLabel id="select-doctor-label">Médico Especialista</InputLabel>
-                        <Select
-                            labelId="select-doctor-label"
-                            label="Médico Especialista"
-                            value={nueva.id_medico}
-                            onChange={handleDoctorChange}
-                        >
-                            <MenuItem value="">
-                                <em>Selecciona un Doctor</em>
-                            </MenuItem>
-                            {doctores.map((doc) => (
-                                <MenuItem key={doc.id} value={doc.id}>
-                                    {doc.nombre}
-                                </MenuItem>
-                            ))}
-                        </Select>
-                    </FormControl>
-
-                    {/* 2. SELECCIÓN DE FECHA */}
-                    <FormControl fullWidth sx={{ mb: 2 }} disabled={!nueva.id_medico}>
-                        <InputLabel id="select-fecha-label">Fecha de Cita</InputLabel>
-                        <Select
-                            labelId="select-fecha-label"
-                            label="Fecha de Cita"
-                            value={nueva.fecha}
-                            onChange={(e) => setNueva({ ...nueva, fecha: e.target.value, hora: '' })} // Resetear hora al cambiar fecha
-                        >
-                            <MenuItem value="">
-                                <em>Selecciona una Fecha</em>
-                            </MenuItem>
-                            {disponibilidadDoctor.map((d) => (
-                                <MenuItem key={d.fecha} value={d.fecha}>
-                                    {d.fecha} ({d.hora_inicio} - {d.hora_fin})
-                                </MenuItem>
-                            ))}
-                        </Select>
-                        {nueva.id_medico && disponibilidadDoctor.length === 0 && (
-                            <Typography variant="caption" color="error" sx={{ mt: 1 }}>
-                                Este doctor no tiene disponibilidad registrada.
-                            </Typography>
+                                {/* Seleccionar Hora (RF06) */}
+                                <Grid item xs={12} sm={6}>
+                                    <FormControl fullWidth sx={{ mb: 2 }}>
+                                        <InputLabel>Hora Disponible</InputLabel>
+                                        <Select
+                                            value={nuevaCita.hora}
+                                            label="Hora Disponible"
+                                            onChange={(e) => setNuevaCita({ ...nuevaCita, hora: e.target.value })}
+                                            disabled={!nuevaCita.fecha} // Deshabilitado hasta que haya fecha
+                                        >
+                                            <MenuItem value="">
+                                                <em>Seleccione una hora</em>
+                                            </MenuItem>
+                                            {/* Solo mostrar horas para la fecha seleccionada */}
+                                            {disponibilidad
+                                                .filter(d => d.fecha === nuevaCita.fecha)
+                                                .map((d) => (
+                                                    <MenuItem key={d.hora_inicio} value={d.hora_inicio}>{d.hora_inicio}</MenuItem>
+                                                ))}
+                                        </Select>
+                                    </FormControl>
+                                </Grid>
+                            </Grid>
                         )}
-                    </FormControl>
-                    
-                    {/* 3. SELECCIÓN DE HORA (Simulación de franja horaria) */}
-                    {/* Nota: En un sistema real, necesitarías dividir la franja d.hora_inicio/fin en slots (ej: cada 30 min) */}
-                     <TextField 
-                        fullWidth 
-                        type="time" 
-                        label="Hora (Manual)"
-                        helperText="Selecciona una hora dentro de la franja disponible."
-                        InputLabelProps={{ shrink: true }}
-                        value={nueva.hora}
-                        onChange={(e) => setNueva({ ...nueva, hora: e.target.value })}
-                        sx={{ mb: 2 }}
-                        disabled={!nueva.fecha}
-                    />
 
-                    {/* 4. MOTIVO */}
-                    <TextField 
-                        fullWidth 
-                        label="Motivo de la Cita"
-                        value={nueva.motivo}
-                        onChange={(e) => setNueva({ ...nueva, motivo: e.target.value })}
-                        disabled={!nueva.fecha}
-                    />
-                </DialogContent>
-
-                <DialogActions>
-                    <Button onClick={() => setOpen(false)} disabled={isLoading}>Cancelar</Button>
-                    <Button 
-                        variant="contained" 
-                        onClick={agendar} 
-                        disabled={isLoading || !nueva.id_medico || !nueva.fecha || !nueva.hora || !nueva.motivo}
-                    >
-                        {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Agendar'}
-                    </Button>
-                </DialogActions>
-            </Dialog>
+                        <TextField
+                            fullWidth
+                            label="Motivo de la Cita"
+                            multiline
+                            rows={3}
+                            sx={{ mb: 2 }}
+                            value={nuevaCita.motivo}
+                            onChange={(e) => setNuevaCita({ ...nuevaCita, motivo: e.target.value })}
+                        />
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={() => setOpenDialog(false)} disabled={loadingAction} color="error">Cancelar</Button>
+                        <Button 
+                            variant="contained" 
+                            color="success"
+                            onClick={simulateAppointment} 
+                            disabled={loadingAction || !nuevaCita.id_medico || !nuevaCita.fecha || !nuevaCita.hora || !nuevaCita.motivo}
+                        >
+                            {loadingAction ? <CircularProgress size={24} color="inherit" /> : 'Confirmar Cita (RF05)'}
+                        </Button>
+                    </DialogActions>
+                </Dialog>
         </Container>
     );
 }

@@ -7,38 +7,63 @@ import DoctorDashboard from './components/DoctorDashboard';
 import AdminDashboard from './components/AdminDashboard';
 import MainLayout from './components/MainLayout';
 
+/**
+ * Componente de protección de ruta
+ * Verifica si el usuario está logueado (existe 'currentUser') y si su rol coincide con el requerido.
+ * @param {string} roleRequired - El rol que se requiere para acceder a la ruta.
+ * @param {React.Component} element - El componente a renderizar si el usuario tiene permiso.
+ */
+const ProtectedRoute = ({ roleRequired, element }) => {
+    // Usamos 'currentUser' tal como lo guardamos en Login.jsx
+    const userJson = localStorage.getItem('currentUser');
+    const user = userJson ? JSON.parse(userJson) : null;
+    
+    // Si no hay usuario logueado, redirige a login
+    if (!user) {
+        return <Navigate to="/login" replace />;
+    }
+
+    // Si el usuario existe pero el rol no coincide, muestra un mensaje de error (o puedes redirigir a una página de error)
+    if (roleRequired && user.rol !== roleRequired) {
+        return <Navigate to="/login" replace />; 
+        // Alternativamente: return <Navigate to="/unauthorized" replace />;
+    }
+
+    // Si todo es correcto, renderiza el componente dentro del layout
+    return <MainLayout>{element}</MainLayout>;
+};
+
+
 function App() {
   return (
     <Router>
       <Routes>
+        {/* Rutas Públicas */}
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
-        {/* MODIFICACIÓN CLAVE: Cambiamos /register por /registration */}
         <Route path="/registration" element={<Registration />} />
+        {/* Agrega una ruta de reset-password si tienes el componente */}
+        {/* <Route path="/reset-password" element={<ResetPassword />} /> */}
 
-        <Route
-          path="/dashboard"
-          element={
-            // Aquí puedes añadir la protección de token para que no cargue si no hay token
-            <MainLayout>
-              {(() => {
-                const user = JSON.parse(localStorage.getItem('user') || 'null');
-                const token = localStorage.getItem('token'); // Verificamos el token
-
-                if (!token) return <Navigate to="/login" replace />; // Usamos Navigate para una redirección limpia
-
-                if (user && user.rol === 'paciente') return <PatientDashboard />;
-                if (user && user.rol === 'doctor') return <DoctorDashboard />;
-                if (user && user.rol === 'admin') return <AdminDashboard />;
-
-                // Si hay token pero el rol no está definido (o no es uno esperado)
-                return <div>No tienes permisos de acceso o tu rol es desconocido.</div>;
-              })()}
-            </MainLayout>
-          }
+        {/* Rutas Protegidas (Dashboard por Rol) */}
+        
+        <Route 
+            path="/patient-dashboard" 
+            element={<ProtectedRoute roleRequired="paciente" element={<PatientDashboard />} />} 
         />
-        {/* Puedes añadir una ruta para el caso en que el token exista pero no la información del usuario */}
-        <Route path="*" element={<LandingPage />} />
+        
+        <Route 
+            path="/doctor-dashboard" 
+            element={<ProtectedRoute roleRequired="medico" element={<DoctorDashboard />} />} 
+        />
+        
+        <Route 
+            path="/admin-dashboard" 
+            element={<ProtectedRoute roleRequired="admin" element={<AdminDashboard />} />} 
+        />
+
+        {/* Manejo de rutas no encontradas (404) */}
+        <Route path="*" element={<Navigate to="/" />} /> 
       </Routes>
     </Router>
   );
